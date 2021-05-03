@@ -1,8 +1,8 @@
 from pysat.solvers import Glucose3
 
-w = 3
-p = 2
-g = 2
+w = 5
+p = 3
+g = 1
 
 x = p * g
 
@@ -15,6 +15,7 @@ def genAllClauses():
     genClause3()
     genClause4()
     genClause5()
+    genClause7()
 
 
 
@@ -50,7 +51,7 @@ def genClause3():
             for j in range(1, p+1):
                 for k in range(1, g+1):
                     for m in range(k+1, g+1):
-                        for n in range(j+1, p+1):
+                        for n in range(1, p+1):
                             loo = []
                             loo.append(-1*getVariable(i, j, k, l))
                             loo.append(-1*getVariable(i, n, m, l))
@@ -67,23 +68,35 @@ def genClause4():
                 sat_solver.add_clause(loo)
 
 
-#nie zrobiobione według pdf'a, gdyż mamy wątpliwości wobec tego co się tam znajduje
 def genClause5():
     for l in range(1, w + 1):
         for k in range(1, g + 1):
             for j in range(1, p + 1):
                 for i in range(1, x + 1):
-                #i = 1
                     for m in range(i + 1, p + 1):
-                        #print(x)
-                        #print("ijkl: " + str(i) + " " + str(j) + " " + str(k) + " " + str(l))
-                        #print("imkl: " + str(i) + " " + str(m) + " " + str(k) + " " + str(l))
                         loo = []
                         loo.append(-1 * getVariable(i, j, k, l))
-                        loo.append(-1 * getVariable(i, m, k, l))
+                        loo.append(-1 * getVariable(m, j, k, l))
                         sat_solver.add_clause(loo)
-                        #print("j " + str(getVariable(i, j, k, l)))
-                        print("m " + str(m) + " j " + str(j) + " imkl: " + str(getVariable(m, j, k, l)))
+
+
+def genClause6():
+    return "todo"
+
+
+def genClause7():
+    for l in range(1, w+1):
+        for k in range(1, g+1):
+            for m in range(1, x+1):
+                for n in range(m+1, x+1):
+                    for k2 in range(1, g+1):
+                        for l2 in range(l+1, w+1):
+                            loo = []
+                            loo.append(-1 * getVariable2(m, k, l))
+                            loo.append(-1 * getVariable2(n, k, l))
+                            loo.append(-1 * getVariable2(m, k2, l2))
+                            loo.append(-1 * getVariable2(n, k2, l2))
+                            sat_solver.add_clause(loo)
 
 
 def getVariable(i, j, k, l):
@@ -94,6 +107,13 @@ def getVariable(i, j, k, l):
     return i + (x * j) + (k * x * p) + (l * x * p * g) + 1
 
 
+def getVariable2(i, k, l):
+    i -= 1
+    k -= 1
+    l -= 1
+    return i + (x * k) + (l * x * g) + 1 + (x * p * g * w)
+
+
 def resolveVariable(v):
     for i in range(1, x+1):
         for l in range(1, w+1):
@@ -101,6 +121,11 @@ def resolveVariable(v):
                 for k in range(1, g+1):
                     if abs(v) == getVariable(i, j, k, l):
                         return i, j, k, l
+    for i in range(1, x+1):
+        for l in range(1, w+1):
+            for k in range(1, g+1):
+                if abs(v) == getVariable2(i, k, l):
+                    return i, k, l
     return
 
 
@@ -109,12 +134,23 @@ if __name__ == "__main__":
     print(sat_solver.solve())
     jakas_zmienna = sat_solver.get_model()
     wynik = []
+    wynik2 = []
     for v in jakas_zmienna:
         print(v)
-        i, j, k, l = resolveVariable(v)
-        if v < 0:
-            wynik.append({"v": False, "i":i, "j":j, "k":k, "l":l})
+        ijkl = resolveVariable(v)
+        if len(ijkl) == 4:
+            i, j, k, l = ijkl
+            if v < 0:
+                wynik.append({"v": False, "i": i, "j": j, "k": k, "l": l})
+            else:
+                wynik.append({"v": True, "i": i, "j": j, "k": k, "l": l})
         else:
-            wynik.append({"v": True, "i":i, "j":j, "k":k, "l":l})
+            i, k, l = ijkl
+            if v < 0:
+                wynik2.append({"v": False, "i": i, "k": k, "l": l})
+            else:
+                wynik2.append({"v": True, "i": i, "k": k, "l": l})
     for row in wynik:
+        print(row)
+    for row in wynik2:
         print(row)
