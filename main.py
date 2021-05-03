@@ -1,8 +1,8 @@
 from pysat.solvers import Glucose3
 
-w = 5
+w = 1
 p = 3
-g = 1
+g = 5
 
 x = p * g
 
@@ -154,3 +154,4 @@ if __name__ == "__main__":
         print(row)
     for row in wynik2:
         print(row)
+    print(sat_solver.nof_clauses())
