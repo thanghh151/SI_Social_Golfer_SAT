@@ -1,8 +1,8 @@
 from pysat.solvers import Glucose3
 
-w = 1
-p = 3
-g = 5
+w = 4 #liczba tygodni
+p = 6 #gracze na grupe
+g = 6 #liczba grup
 
 x = p * g
 
@@ -15,6 +15,7 @@ def genAllClauses():
     genClause3()
     genClause4()
     genClause5()
+    genClause6()
     genClause7()
 
 
@@ -81,7 +82,19 @@ def genClause5():
 
 
 def genClause6():
-    return "todo"
+    for i in range(1, x + 1):
+        for k in range(1, g + 1):
+            for l in range(1, w + 1):
+                tab = []
+                tab.append(-1 * getVariable2(i, k, l))
+                for j in range(1, p + 1):
+                    tab.append(getVariable(i, j, k, l))
+                    tab2 = []
+                    tab2.append(getVariable2(i, k, l))
+                    tab2.append(-1 * getVariable(i, j, k, l))
+                    sat_solver.add_clause(tab2)
+                sat_solver.add_clause(tab)
+
 
 
 def genClause7():
@@ -128,30 +141,56 @@ def resolveVariable(v):
                     return i, k, l
     return
 
+def showResults(wyn):
+    tab=[]
+    for row in wyn:
+        if row["v"] == True:
+            tab.append(row)
+    ntab={}
+    for tyg in range(1,w+1):
+        ntab[tyg] = {}
+        for grp in range(1, g+1):
+            ntab[tyg][grp]=[]
+    for row in tab:
+        ntab[row["l"]][row["k"]].append(row["i"])
+    return ntab
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     genAllClauses()
-    print(sat_solver.solve())
-    jakas_zmienna = sat_solver.get_model()
-    wynik = []
-    wynik2 = []
-    for v in jakas_zmienna:
-        print(v)
-        ijkl = resolveVariable(v)
-        if len(ijkl) == 4:
-            i, j, k, l = ijkl
-            if v < 0:
-                wynik.append({"v": False, "i": i, "j": j, "k": k, "l": l})
+    satsolvd = sat_solver.solve()
+    if satsolvd ==False:
+        print("że sie nie da")
+    else:
+
+        jakas_zmienna = sat_solver.get_model()
+        wynik = []
+        wynik2 = []
+        for v in jakas_zmienna:
+            #print(v)
+            ijkl = resolveVariable(v)
+            if len(ijkl) == 4:
+                i, j, k, l = ijkl
+                if v < 0:
+                    wynik.append({"v": False, "i": i, "j": j, "k": k, "l": l})
+                else:
+                    wynik.append({"v": True, "i": i, "j": j, "k": k, "l": l})
             else:
-                wynik.append({"v": True, "i": i, "j": j, "k": k, "l": l})
-        else:
-            i, k, l = ijkl
-            if v < 0:
-                wynik2.append({"v": False, "i": i, "k": k, "l": l})
-            else:
-                wynik2.append({"v": True, "i": i, "k": k, "l": l})
-    for row in wynik:
-        print(row)
-    for row in wynik2:
-        print(row)
-    print(sat_solver.nof_clauses())
+                i, k, l = ijkl
+                if v < 0:
+                    wynik2.append({"v": False, "i": i, "k": k, "l": l})
+                else:
+                    wynik2.append({"v": True, "i": i, "k": k, "l": l})
+        #for row in wynik:
+            #print(row)
+        ostatecznyWynik = showResults(wynik)
+        for klu,wart in ostatecznyWynik.items():
+            print(str(klu)+":"+str(wart))
+        print("klauzyle: "+str(sat_solver.nof_clauses()))
+        print("varriablesy: "+str(sat_solver.nof_vars()))
