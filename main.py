@@ -1,8 +1,9 @@
 from pysat.solvers import Glucose3
+from prettytable import PrettyTable
 
-w = 4 #liczba tygodni
-p = 6 #gracze na grupe
-g = 6 #liczba grup
+w = 3 #liczba tygodni
+p = 3 #gracze na grupe
+g = 5 #liczba grup
 
 x = p * g
 
@@ -17,7 +18,9 @@ def genAllClauses():
     genClause5()
     genClause6()
     genClause7()
-
+    genSymmetryBreakingClause1()
+    genSymmetryBreakingClause2()
+    genSymmetryBreakingClause3()
 
 
 #co najmniej raz w tygodniu każdy golfista gra
@@ -42,8 +45,6 @@ def genClause2():
                         loo.append(-1*getVariable(i, j, k, l))
                         loo.append(-1*getVariable(i, m, k, l))
                         sat_solver.add_clause(loo)
-                        #print("j " + str(getVariable(i, j, k, l)))
-                        #print("m " + str(getVariable(i, m, k, l)))
 
 
 def genClause3():
@@ -96,7 +97,6 @@ def genClause6():
                 sat_solver.add_clause(tab)
 
 
-
 def genClause7():
     for l in range(1, w+1):
         for k in range(1, g+1):
@@ -110,6 +110,39 @@ def genClause7():
                             loo.append(-1 * getVariable2(m, k2, l2))
                             loo.append(-1 * getVariable2(n, k2, l2))
                             sat_solver.add_clause(loo)
+
+
+def genSymmetryBreakingClause1():
+    for i in range(1, x+1):
+        for j in range(1, p):
+            for k in range(1, g+1):
+                for l in range(1, w+1):
+                    for m in range(1, i+1):
+                        loo = []
+                        loo.append(-1 * getVariable(i, j, k, l))
+                        loo.append(-1 * getVariable(m, j+1, k, l))
+                        sat_solver.add_clause(loo)
+
+
+def genSymmetryBreakingClause2():
+    for i in range(1, x+1):
+        for k in range(1, g):
+            for l in range(1, w+1):
+                for m in range(1, i):
+                    loo = []
+                    loo.append(-1 * getVariable(i, 1, k, l))
+                    loo.append(-1 * getVariable(m, 1, k+1, l))
+                    sat_solver.add_clause(loo)
+
+
+def genSymmetryBreakingClause3():
+    for i in range(1, x+1):
+        for l in range(1, w):
+            for m in range(1, i+1):
+                loo = []
+                loo.append(-1 * getVariable(i, 2, 1, l))
+                loo.append(-1 * getVariable(m, 2, 1, l+1))
+                sat_solver.add_clause(loo)
 
 
 def getVariable(i, j, k, l):
@@ -141,6 +174,7 @@ def resolveVariable(v):
                     return i, k, l
     return
 
+
 def showResults(wyn):
     tab=[]
     for row in wyn:
@@ -156,24 +190,56 @@ def showResults(wyn):
     return ntab
 
 
+def showResults2(wyn):
+    x = PrettyTable()
+    field_names = []
+    field_names.append("Tydzien")
+    for grupa in range(1, g+1):
+        field_names.append("Grupa " + str(grupa))
+    x.field_names = field_names
+    for tyg in range(1, w+1):
+        row = [str(tyg)]
+        for grupa in range(1, g+1):
+            row.append(str(",".join(list(map(str, wyn[tyg][grupa])))))
+        x.add_row(row)
+    print(x)
 
 
+def menu():
+    global w, p, g
+    while True:
+        try:
+            w = int(input("Podaj liczbę tygodni\n"))
+            if w <= 0:
+                print("Podaj poprawną wartość\n")
+                continue
+            p = int(input("Podaj liczbę graczy w grupie\n"))
+            if p <= 0:
+                print("Podaj poprawną wartość\n")
+                continue
+            g = int(input("Podaj liczbę grup\n"))
+            if g <= 0:
+                print("Podaj poprawną wartość\n")
+                continue
+        except ValueError:
+            print("Podaj poprawną wartość\n")
+            continue
+        else:
+            break
+    solveSatProblem()
 
 
-
-
-if __name__ == "__main__":
+def solveSatProblem():
     genAllClauses()
-    satsolvd = sat_solver.solve()
-    if satsolvd ==False:
-        print("że sie nie da")
+    sat_solver.conf_budget(1000000)
+    satsolvd = sat_solver.solve_limited()
+    if satsolvd == False:
+        print("Nie znaleziono.")
     else:
-
         jakas_zmienna = sat_solver.get_model()
         wynik = []
         wynik2 = []
         for v in jakas_zmienna:
-            #print(v)
             ijkl = resolveVariable(v)
             if len(ijkl) == 4:
                 i, j, k, l = ijkl
@@ -187,10 +253,11 @@ if __name__ == "__main__":
                     wynik2.append({"v": False, "i": i, "k": k, "l": l})
                 else:
                     wynik2.append({"v": True, "i": i, "k": k, "l": l})
-        #for row in wynik:
-            #print(row)
         ostatecznyWynik = showResults(wynik)
-        for klu,wart in ostatecznyWynik.items():
-            print(str(klu)+":"+str(wart))
-        print("klauzyle: "+str(sat_solver.nof_clauses()))
-        print("varriablesy: "+str(sat_solver.nof_vars()))
+        print("Klauzule: " + str(sat_solver.nof_clauses()))
+        print("Zmienne: " + str(sat_solver.nof_vars()))
+        showResults2(ostatecznyWynik)
+
+
+if __name__ == "__main__":
+    menu()
