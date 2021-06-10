@@ -230,8 +230,10 @@ def menu():
 
 
 def solveSatProblem():
+    global x
+    x = p * g
     genAllClauses()
-    sat_solver.conf_budget(1000000)
+    #sat_solver.conf_budget(1000000)
     satsolvd = sat_solver.solve_limited()
     if satsolvd == False:
         print("Nie znaleziono.")
