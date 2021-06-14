@@ -7,6 +7,8 @@ g = 5 #liczba grup
 
 x = p * g
 
+conflict_budget = 10000
+
 sat_solver = Glucose3()
 
 
@@ -204,6 +206,42 @@ def showResults2(wyn):
         x.add_row(row)
     print(x)
 
+def change_conf_budget():
+    global conflict_budget
+    while True:
+        try:
+            budg = int(input("Podaj nowy budżet konfliktów (aktualny: " + str(conflict_budget) + "):\n"))
+            conflict_budget = budg
+        except ValueError:
+            print("Podaj poprawną wartość\n")
+            continue
+        else:
+            break
+
+
+def main_menu():
+    while True:
+        try:
+            print("/------------------------------\\")
+            print("| Social Golfer Problem Solver |")
+            print("\\------------------------------/\n")
+            print("1 - Rozwiąż problem Social Golfer\n"
+                  "2 - Zmień budżet konfliktów (akt: " + str(conflict_budget) + ")\n"
+                  "0 - Zakończ\n")
+            wybor = int(input("Wybierz opcje:\n"))
+            if wybor == 1:
+                menu()
+            elif wybor == 2:
+                change_conf_budget()
+            elif wybor == 0:
+                return
+
+        except ValueError:
+            print("Podaj poprawną wartość\n")
+            continue
+        else:
+            pass
+
 
 def menu():
     global w, p, g
@@ -230,15 +268,19 @@ def menu():
 
 
 def solveSatProblem():
-    global x
+    global x, sat_solver
     x = p * g
+    sat_solver = Glucose3()
+    sat_solver.conf_budget(conflict_budget)
     genAllClauses()
-    #sat_solver.conf_budget(1000000)
     satsolvd = sat_solver.solve_limited()
     if satsolvd == False:
-        print("Nie znaleziono.")
+        print("Nie znaleziono. Rozwiązanie nie istnieje.")
     else:
         jakas_zmienna = sat_solver.get_model()
+        if jakas_zmienna == None:
+            print("Nie znaleziono. Przekroczono budżet konfliktów.\n")
+            return
         wynik = []
         wynik2 = []
         for v in jakas_zmienna:
@@ -262,4 +304,5 @@ def solveSatProblem():
 
 
 if __name__ == "__main__":
-    menu()
+    main_menu()
+    #menu()
