@@ -1,4 +1,5 @@
 from pysat.solvers import Glucose3
+from pysat.solvers import MinisatGH
 from prettytable import PrettyTable
 
 w = 3 #liczba tygodni
@@ -7,9 +8,9 @@ g = 5 #liczba grup
 
 x = p * g
 
-conflict_budget = 10000
+conflict_budget = 50
 
-sat_solver = Glucose3()
+sat_solver = None
 
 
 def genAllClauses():
@@ -193,20 +194,21 @@ def showResults(wyn):
 
 
 def showResults2(wyn):
-    x = PrettyTable()
+    prt_table = PrettyTable()
     field_names = []
     field_names.append("Tydzien")
     for grupa in range(1, g+1):
         field_names.append("Grupa " + str(grupa))
-    x.field_names = field_names
+    prt_table.field_names = field_names
     for tyg in range(1, w+1):
         row = [str(tyg)]
         for grupa in range(1, g+1):
             row.append(str(",".join(list(map(str, wyn[tyg][grupa])))))
-        x.add_row(row)
-    print(x)
+        prt_table.add_row(row)
+    print(prt_table)
 
-def change_conf_budget():
+
+def changeConfBudget():
     global conflict_budget
     while True:
         try:
@@ -232,7 +234,7 @@ def main_menu():
             if wybor == 1:
                 menu()
             elif wybor == 2:
-                change_conf_budget()
+                changeConfBudget()
             elif wybor == 0:
                 return
 
@@ -268,11 +270,12 @@ def menu():
 
 
 def solveSatProblem():
-    global x, sat_solver
+    global x, sat_solver, conflict_budget
     x = p * g
+    #sat_solver = MinisatGH()
     sat_solver = Glucose3()
-    sat_solver.conf_budget(conflict_budget)
     genAllClauses()
+    sat_solver.prop_budget(50)
     satsolvd = sat_solver.solve_limited()
     if satsolvd == False:
         print("Nie znaleziono. Rozwiązanie nie istnieje.")
@@ -301,6 +304,8 @@ def solveSatProblem():
         print("Klauzule: " + str(sat_solver.nof_clauses()))
         print("Zmienne: " + str(sat_solver.nof_vars()))
         showResults2(ostatecznyWynik)
+        print(sat_solver.accum_stats())
+        sat_solver.delete()
 
 
 if __name__ == "__main__":
