@@ -1,16 +1,17 @@
-from pysat.solvers import Glucose3
-from pysat.solvers import MinisatGH
+from pysat.solvers import Glucose3, Solver
 from prettytable import PrettyTable
+from threading import Timer
 
-w = 3 #liczba tygodni
-p = 3 #gracze na grupe
-g = 5 #liczba grup
+w: int  # liczba tygodni
+p: int  # gracze na grupe
+g: int  # liczba grup
+x: int  # p * g
 
-x = p * g
+time_budget = 10
+show_additional_info = True
+show_additional_info_str = "Tak"
 
-conflict_budget = 50
-
-sat_solver = None
+sat_solver: Solver
 
 
 def genAllClauses():
@@ -26,49 +27,48 @@ def genAllClauses():
     genSymmetryBreakingClause3()
 
 
-#co najmniej raz w tygodniu każdy golfista gra
+# Każdy golfista gra co najmniej raz w tygodniu
 def genClause1():
-    for i in range(1, x+1):
-        for l in range(1, w+1):
+    for i in range(1, x + 1):
+        for l in range(1, w + 1):
             loo = []
-            for j in range(1, p+1):
-                for k in range(1, g+1):
+            for j in range(1, p + 1):
+                for k in range(1, g + 1):
                     loo.append(getVariable(i, j, k, l))
             sat_solver.add_clause(loo)
 
 
-#co najwyżej raz w tygodniu każdy golfista gra
+# Każdy golfista gra co najwyżej raz w każdej grupie w każdym tygodniu
 def genClause2():
-    for i in range(1, x+1):
-        for l in range(1, w+1):
-            for j in range(1, p+1):
-                for k in range(1, g+1):
-                    for m in range(j+1, p+1):
-                        loo = []
-                        loo.append(-1*getVariable(i, j, k, l))
-                        loo.append(-1*getVariable(i, m, k, l))
+    for i in range(1, x + 1):
+        for l in range(1, w + 1):
+            for j in range(1, p + 1):
+                for k in range(1, g + 1):
+                    for m in range(j + 1, p + 1):
+                        loo = [-1 * getVariable(i, j, k, l),
+                               -1 * getVariable(i, m, k, l)]
                         sat_solver.add_clause(loo)
 
 
+# Żaden golfista nie gra w więcej niż jednej grupie w każdym tygodniu
 def genClause3():
-    for i in range(1, x+1):
-        for l in range(1, w+1):
-            for j in range(1, p+1):
-                for k in range(1, g+1):
-                    for m in range(k+1, g+1):
-                        for n in range(1, p+1):
-                            loo = []
-                            loo.append(-1*getVariable(i, j, k, l))
-                            loo.append(-1*getVariable(i, n, m, l))
+    for i in range(1, x + 1):
+        for l in range(1, w + 1):
+            for j in range(1, p + 1):
+                for k in range(1, g + 1):
+                    for m in range(k + 1, g + 1):
+                        for n in range(1, p + 1):
+                            loo = [-1 * getVariable(i, j, k, l),
+                                   -1 * getVariable(i, n, m, l)]
                             sat_solver.add_clause(loo)
 
 
 def genClause4():
-    for l in range(1, w+1):
-        for k in range(1, g+1):
-            for j in range(1, p+1):
+    for l in range(1, w + 1):
+        for k in range(1, g + 1):
+            for j in range(1, p + 1):
                 loo = []
-                for i in range(1, x+1):
+                for i in range(1, x + 1):
                     loo.append(getVariable(i, j, k, l))
                 sat_solver.add_clause(loo)
 
@@ -79,72 +79,67 @@ def genClause5():
             for j in range(1, p + 1):
                 for i in range(1, x + 1):
                     for m in range(i + 1, p + 1):
-                        loo = []
-                        loo.append(-1 * getVariable(i, j, k, l))
-                        loo.append(-1 * getVariable(m, j, k, l))
+                        loo = [-1 * getVariable(i, j, k, l),
+                               -1 * getVariable(m, j, k, l)]
                         sat_solver.add_clause(loo)
 
 
+# Jest to klauzula łącząca dwa zestawy zmiennych, ijkl oraz ikl
 def genClause6():
     for i in range(1, x + 1):
         for k in range(1, g + 1):
             for l in range(1, w + 1):
-                tab = []
-                tab.append(-1 * getVariable2(i, k, l))
+                tab = [-1 * getVariable2(i, k, l)]
                 for j in range(1, p + 1):
                     tab.append(getVariable(i, j, k, l))
-                    tab2 = []
-                    tab2.append(getVariable2(i, k, l))
-                    tab2.append(-1 * getVariable(i, j, k, l))
+                    tab2 = [getVariable2(i, k, l),
+                            -1 * getVariable(i, j, k, l)]
                     sat_solver.add_clause(tab2)
                 sat_solver.add_clause(tab)
 
 
+# Jeśli dwaj gracze m oraz n grają w tej samej grupie k w tygodniu l to nie mogą grać razem w żadnej grupie razem w przyszłych tygodniach
 def genClause7():
-    for l in range(1, w+1):
-        for k in range(1, g+1):
-            for m in range(1, x+1):
-                for n in range(m+1, x+1):
-                    for k2 in range(1, g+1):
-                        for l2 in range(l+1, w+1):
-                            loo = []
-                            loo.append(-1 * getVariable2(m, k, l))
-                            loo.append(-1 * getVariable2(n, k, l))
-                            loo.append(-1 * getVariable2(m, k2, l2))
-                            loo.append(-1 * getVariable2(n, k2, l2))
+    for l in range(1, w + 1):
+        for k in range(1, g + 1):
+            for m in range(1, x + 1):
+                for n in range(m + 1, x + 1):
+                    for k2 in range(1, g + 1):
+                        for l2 in range(l + 1, w + 1):
+                            loo = [-1 * getVariable2(m, k, l),
+                                   -1 * getVariable2(n, k, l),
+                                   -1 * getVariable2(m, k2, l2),
+                                   -1 * getVariable2(n, k2, l2)]
                             sat_solver.add_clause(loo)
 
 
 def genSymmetryBreakingClause1():
-    for i in range(1, x+1):
+    for i in range(1, x + 1):
         for j in range(1, p):
-            for k in range(1, g+1):
-                for l in range(1, w+1):
-                    for m in range(1, i+1):
-                        loo = []
-                        loo.append(-1 * getVariable(i, j, k, l))
-                        loo.append(-1 * getVariable(m, j+1, k, l))
+            for k in range(1, g + 1):
+                for l in range(1, w + 1):
+                    for m in range(1, i + 1):
+                        loo = [-1 * getVariable(i, j, k, l),
+                               -1 * getVariable(m, j + 1, k, l)]
                         sat_solver.add_clause(loo)
 
 
 def genSymmetryBreakingClause2():
-    for i in range(1, x+1):
+    for i in range(1, x + 1):
         for k in range(1, g):
-            for l in range(1, w+1):
+            for l in range(1, w + 1):
                 for m in range(1, i):
-                    loo = []
-                    loo.append(-1 * getVariable(i, 1, k, l))
-                    loo.append(-1 * getVariable(m, 1, k+1, l))
+                    loo = [-1 * getVariable(i, 1, k, l),
+                           -1 * getVariable(m, 1, k + 1, l)]
                     sat_solver.add_clause(loo)
 
 
 def genSymmetryBreakingClause3():
-    for i in range(1, x+1):
+    for i in range(1, x + 1):
         for l in range(1, w):
-            for m in range(1, i+1):
-                loo = []
-                loo.append(-1 * getVariable(i, 2, 1, l))
-                loo.append(-1 * getVariable(m, 2, 1, l+1))
+            for m in range(1, i + 1):
+                loo = [-1 * getVariable(i, 2, 1, l),
+                       -1 * getVariable(m, 2, 1, l + 1)]
                 sat_solver.add_clause(loo)
 
 
@@ -164,56 +159,55 @@ def getVariable2(i, k, l):
 
 
 def resolveVariable(v):
-    for i in range(1, x+1):
-        for l in range(1, w+1):
-            for j in range(1, p+1):
-                for k in range(1, g+1):
+    for i in range(1, x + 1):
+        for l in range(1, w + 1):
+            for j in range(1, p + 1):
+                for k in range(1, g + 1):
                     if abs(v) == getVariable(i, j, k, l):
                         return i, j, k, l
-    for i in range(1, x+1):
-        for l in range(1, w+1):
-            for k in range(1, g+1):
+    for i in range(1, x + 1):
+        for l in range(1, w + 1):
+            for k in range(1, g + 1):
                 if abs(v) == getVariable2(i, k, l):
                     return i, k, l
     return
 
 
-def showResults(wyn):
-    tab=[]
-    for row in wyn:
-        if row["v"] == True:
-            tab.append(row)
-    ntab={}
-    for tyg in range(1,w+1):
+def processResults(wyn):
+    ntab = {}
+    for tyg in range(1, w + 1):
         ntab[tyg] = {}
-        for grp in range(1, g+1):
-            ntab[tyg][grp]=[]
-    for row in tab:
+        for grp in range(1, g + 1):
+            ntab[tyg][grp] = []
+    for row in wyn:
         ntab[row["l"]][row["k"]].append(row["i"])
     return ntab
 
 
-def showResults2(wyn):
+def showResults(wyn):
     prt_table = PrettyTable()
-    field_names = []
-    field_names.append("Tydzien")
-    for grupa in range(1, g+1):
+    field_names = ["Tydzien"]
+    for grupa in range(1, g + 1):
         field_names.append("Grupa " + str(grupa))
     prt_table.field_names = field_names
-    for tyg in range(1, w+1):
+    for tyg in range(1, w + 1):
         row = [str(tyg)]
-        for grupa in range(1, g+1):
+        for grupa in range(1, g + 1):
             row.append(str(",".join(list(map(str, wyn[tyg][grupa])))))
         prt_table.add_row(row)
     print(prt_table)
 
 
-def changeConfBudget():
-    global conflict_budget
+def changeTimeBudget():
+    global time_budget
     while True:
         try:
-            budg = int(input("Podaj nowy budżet konfliktów (aktualny: " + str(conflict_budget) + "):\n"))
-            conflict_budget = budg
+            time_bud = int(input("\nPodaj nowy limit czasu w sekundach (aktualny: " + str(time_budget) + "s): "))
+            if time_bud < 0:
+                time_bud = 0
+            elif time_bud > 999999:
+                time_bud = 999999
+            time_budget = time_bud
         except ValueError:
             print("Podaj poprawną wartość\n")
             continue
@@ -221,20 +215,48 @@ def changeConfBudget():
             break
 
 
-def main_menu():
+def changeShowingAdditionalInfo():
+    global show_additional_info, show_additional_info_str
     while True:
         try:
-            print("/------------------------------\\")
+            print(
+                "\nCzy mają być wyświetlane dodatkowe informacje odnośnie rozwiązywania problemu w SAT Solverze (tzn.: liczba zmiennych, liczba klauzul, propagacje, konflikty, decyzje oraz restarty)")
+            print("1 - Tak")
+            print("2 - Nie")
+            wybor = int(input("Wybierz opcje: "))
+            if wybor == 1:
+                show_additional_info = True
+                show_additional_info_str = "Tak"
+            elif wybor == 2:
+                show_additional_info = False
+                show_additional_info_str = "Nie"
+            else:
+                print("Podaj poprawną wartość\n")
+                continue
+        except ValueError:
+            print("Podaj poprawną wartość\n")
+            continue
+        else:
+            break
+
+
+def mainMenu():
+    while True:
+        try:
+            print("\n/------------------------------\\")
             print("| Social Golfer Problem Solver |")
-            print("\\------------------------------/\n")
-            print("1 - Rozwiąż problem Social Golfer\n"
-                  "2 - Zmień budżet konfliktów (akt: " + str(conflict_budget) + ")\n"
-                  "0 - Zakończ\n")
-            wybor = int(input("Wybierz opcje:\n"))
+            print("\\------------------------------/")
+            print("1 - Rozwiąż problem Social Golfer")
+            print("2 - Zmień limit czasu (aktualnie: " + str(time_budget) + "s)")
+            print("3 - Zmień pokazywanie dodatkowych informacji (aktualnie: " + show_additional_info_str + ")")
+            print("0 - Zakończ")
+            wybor = int(input("Wybierz opcje: "))
             if wybor == 1:
                 menu()
             elif wybor == 2:
-                changeConfBudget()
+                changeTimeBudget()
+            elif wybor == 3:
+                changeShowingAdditionalInfo()
             elif wybor == 0:
                 return
 
@@ -249,15 +271,15 @@ def menu():
     global w, p, g
     while True:
         try:
-            w = int(input("Podaj liczbę tygodni\n"))
+            w = int(input("Podaj liczbę tygodni: "))
             if w <= 0:
                 print("Podaj poprawną wartość\n")
                 continue
-            p = int(input("Podaj liczbę graczy w grupie\n"))
+            p = int(input("Podaj liczbę graczy w grupie: "))
             if p <= 0:
                 print("Podaj poprawną wartość\n")
                 continue
-            g = int(input("Podaj liczbę grup\n"))
+            g = int(input("Podaj liczbę grup: "))
             if g <= 0:
                 print("Podaj poprawną wartość\n")
                 continue
@@ -269,45 +291,65 @@ def menu():
     solveSatProblem()
 
 
+def interrupt(s):
+    s.interrupt()
+
+
 def solveSatProblem():
-    global x, sat_solver, conflict_budget
+    global x, sat_solver
     x = p * g
-    #sat_solver = MinisatGH()
-    sat_solver = Glucose3()
+
+    print("\nGenerowanie problemu.")
+
+    sat_solver = Glucose3(use_timer=True)
     genAllClauses()
-    sat_solver.prop_budget(50)
-    satsolvd = sat_solver.solve_limited()
-    if satsolvd == False:
-        print("Nie znaleziono. Rozwiązanie nie istnieje.")
-    else:
-        jakas_zmienna = sat_solver.get_model()
-        if jakas_zmienna == None:
-            print("Nie znaleziono. Przekroczono budżet konfliktów.\n")
-            return
-        wynik = []
-        wynik2 = []
-        for v in jakas_zmienna:
-            ijkl = resolveVariable(v)
-            if len(ijkl) == 4:
-                i, j, k, l = ijkl
-                if v < 0:
-                    wynik.append({"v": False, "i": i, "j": j, "k": k, "l": l})
-                else:
-                    wynik.append({"v": True, "i": i, "j": j, "k": k, "l": l})
-            else:
-                i, k, l = ijkl
-                if v < 0:
-                    wynik2.append({"v": False, "i": i, "k": k, "l": l})
-                else:
-                    wynik2.append({"v": True, "i": i, "k": k, "l": l})
-        ostatecznyWynik = showResults(wynik)
+
+    if show_additional_info:
         print("Klauzule: " + str(sat_solver.nof_clauses()))
         print("Zmienne: " + str(sat_solver.nof_vars()))
-        showResults2(ostatecznyWynik)
-        print(sat_solver.accum_stats())
-        sat_solver.delete()
+
+    print("\nSzukanie rozwiązania.")
+
+    timer = Timer(time_budget, interrupt, [sat_solver])
+    timer.start()
+
+    sat_status = sat_solver.solve_limited(expect_interrupt=True)
+
+    if sat_status is False:
+        print("\nNie znaleziono. Rozwiązanie nie istnieje.")
+    else:
+        solution = sat_solver.get_model()
+        if solution is None:
+            print("Nie znaleziono. Przekroczono czas (" + '{0:.2f}s'.format(sat_solver.time()) + ").\n")
+        else:
+            print(
+                "Znaleziono rozwiązanie w czasie " + '{0:.2f}s'.format(sat_solver.time()) + ". Trwa generowanie go.\n")
+            wynik = []
+            for v in solution:
+                if v > 0:
+                    ijkl = resolveVariable(v)
+                    if len(ijkl) == 3:
+                        i, k, l = ijkl
+                        wynik.append({"i": i, "k": k, "l": l})
+
+            ostateczny_wynik = processResults(wynik)
+            showResults(ostateczny_wynik)
+
+            if show_additional_info:
+                sat_accum_stats = sat_solver.accum_stats()
+                print("Restarty: " +
+                      str(sat_accum_stats['restarts']) +
+                      ", konflikty: " +
+                      str(sat_accum_stats['conflicts']) +
+                      ", decyzje: " +
+                      str(sat_accum_stats['decisions']) +
+                      ", propagacje: " +
+                      str(sat_accum_stats["propagations"]))
+
+        input("Naciśnij Enter aby kontynuować...")
+
+    sat_solver.delete()
 
 
 if __name__ == "__main__":
-    main_menu()
-    #menu()
+    mainMenu()
