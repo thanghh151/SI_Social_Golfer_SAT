@@ -25,7 +25,6 @@ def generate_all_clauses():
     generate_symmetry_breaking_clause2()
     generate_symmetry_breaking_clause3()
 
-
 # (ALO) Every golfer plays at least once a week
 def ensure_golfer_plays_at_least_once_per_week():
     for player in range(1, num_players + 1):
@@ -113,7 +112,7 @@ def ensure_no_repeated_players_in_groups():
                                       -1 * get_variable2(golfer2, other_group, other_week)]
                             sat_solver.add_clause(clause)
 
-
+#(ALO) ensure no two players occupy the same position in the same group in the same week
 def generate_symmetry_breaking_clause1():
     for golfer1 in range(1, num_players + 1):
         for position1 in range(1, players_per_group):
@@ -124,6 +123,7 @@ def generate_symmetry_breaking_clause1():
                                   -1 * get_variable(golfer2, position1 + 1, group, week)]
                         sat_solver.add_clause(clause)
 
+# A player cannot be in the first position of a group in a week if they are in the first position of the next group in the same week
 def generate_symmetry_breaking_clause2():
     for golfer1 in range(1, num_players + 1):
         for group in range(1, num_groups):
@@ -133,6 +133,7 @@ def generate_symmetry_breaking_clause2():
                               -1 * get_variable(golfer2, 1, group + 1, week)]
                     sat_solver.add_clause(clause)
 
+#A player cannot be in the second position of the first group in a week if they are in the second position of the first group in the next week
 def generate_symmetry_breaking_clause3():
     for golfer1 in range(1, num_players + 1):
         for week in range(1, num_weeks):
@@ -141,6 +142,7 @@ def generate_symmetry_breaking_clause3():
                           -1 * get_variable(golfer2, 2, 1, week + 1)]
                 sat_solver.add_clause(clause)
 
+# returns a unique identifier for the variable that represents the assignment of the golfer to the position in the group in the week
 def get_variable(golfer, position, group, week):
     golfer -= 1
     position -= 1
@@ -148,6 +150,7 @@ def get_variable(golfer, position, group, week):
     week -= 1
     return golfer + (num_players * position) + (group * num_players * players_per_group) + (week * num_players * players_per_group * num_groups) + 1
 
+# returns a unique identifier for the variable that represents the assignment of the golfer to the group in the week
 def get_variable2(golfer, group, week):
     golfer -= 1
     group -= 1
