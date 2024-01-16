@@ -1,6 +1,7 @@
 from pysat.solvers import Glucose3, Solver
 from prettytable import PrettyTable
 from threading import Timer
+import datetime
 
 num_weeks: int  # number of weeks
 players_per_group: int  # players per group
@@ -33,6 +34,7 @@ def ensure_golfer_plays_at_least_once_per_week():
             for position in range(1, players_per_group + 1):
                 for group in range(1, num_groups + 1):
                     clause.append(get_variable(player, position, group, week))
+            print(clause)
             sat_solver.add_clause(clause)
 
 
@@ -233,58 +235,59 @@ def change_showing_additional_info():
         else:
             break
 
-def main_menu():
-    while True:
-        try:
-            print("\n/------------------------------\\")
-            print("| Social Golfer Problem Solver |")
-            print("\\------------------------------/")
-            print("1 - Solve the Social Golfer problem")
-            print("2 - Change timeout (currently: " + str(time_budget) + "s)")
-            print("3 - Change showing additional information (currently: " + show_additional_info_str + ")")
-            print("0 - Finish")
-            selection = int(input("Select options: "))
-            if selection == 1:
-                menu()
-            elif selection == 2:
-                change_time_budget()
-            elif selection == 3:
-                change_showing_additional_info()
-            elif selection == 0:
-                return
+# def main_menu():
+#     while True:
+#         try:
+#             print("\n/------------------------------\\")
+#             print("| Social Golfer Problem Solver |")
+#             print("\\------------------------------/")
+#             print("1 - Solve the Social Golfer problem")
+#             print("2 - Change timeout (currently: " + str(time_budget) + "s)")
+#             print("3 - Change showing additional information (currently: " + show_additional_info_str + ")")
+#             print("0 - Finish")
+#             selection = int(input("Select options: "))
+#             if selection == 1:
+#                 menu()
+#             elif selection == 2:
+#                 change_time_budget()
+#             elif selection == 3:
+#                 change_showing_additional_info()
+#             elif selection == 0:
+#                 return
 
-        except ValueError:
-            print("Enter a valid value\n")
-            continue
-        else:
-            pass
+#         except ValueError:
+#             print("Enter a valid value\n")
+#             continue
+#         else:
+#             pass
 
-def menu():
-    global num_weeks, players_per_group, num_groups
-    while True:
-        try:
-            num_weeks = int(input("Enter the number of weeks: "))
-            if num_weeks <= 0:
-                print("Enter a valid value\n")
-                continue
-            players_per_group = int(input("Enter the number of players per group: "))
-            if players_per_group <= 0:
-                print("Enter a valid value\n")
-                continue
-            num_groups = int(input("Enter the number of groups: "))
-            if num_groups <= 0:
-                print("Enter a valid value\n")
-                continue
-        except ValueError:
-            print("Enter a valid value\n")
-            continue
-        else:
-            break
-    solve_sat_problem()
+# def menu():
+#     global num_weeks, players_per_group, num_groups
+#     while True:
+#         try:
+#             num_weeks = int(input("Enter the number of weeks: "))
+#             if num_weeks <= 0:
+#                 print("Enter a valid value\n")
+#                 continue
+#             players_per_group = int(input("Enter the number of players per group: "))
+#             if players_per_group <= 0:
+#                 print("Enter a valid value\n")
+#                 continue
+#             num_groups = int(input("Enter the number of groups: "))
+#             if num_groups <= 0:
+#                 print("Enter a valid value\n")
+#                 continue
+#         except ValueError:
+#             print("Enter a valid value\n")
+#             continue
+#         else:
+#             break
+#     solve_sat_problem()
 
 def interrupt(s):
     s.interrupt()
 
+# solve the problem using the SAT Solver and write the results to text file: out/results_datetime.txt
 def solve_sat_problem():
     global num_players, sat_solver
     num_players = players_per_group * num_groups
@@ -339,5 +342,30 @@ def solve_sat_problem():
 
     sat_solver.delete()
 
+    # Get the current date and time
+    current_datetime = datetime.datetime.now()
+
+    # Create the file path
+    file_path = "out/results_" + current_datetime.strftime("%Y%m%d_%H%M%S") + ".txt"
+
+    # Write the result to the file
+    with open(file_path, "w") as f:
+        f.write("Solution:\n")
+        for r in final_result:
+            f.write(f"Golfer: {r['golfer']}, Group: {r['group']}, Week: {r['week']}\n")
+
+    print("Result written to file:", file_path)
+
+# read input data from file data.txt (many lines, each line is number of weeks, number of players per group, number of groups)
+# solve the problem
+
+def run_from_input_file():
+    global num_weeks, players_per_group, num_groups
+    with open("data.txt") as f:
+        for line in f:
+            num_weeks, players_per_group, num_groups = map(int, line.split())
+            solve_sat_problem()
+
 if __name__ == "__main__":
-    main_menu()
+    # main_menu()
+    run_from_input_file()
