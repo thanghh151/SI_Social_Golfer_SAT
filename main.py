@@ -36,32 +36,58 @@ def ensure_golfer_plays_at_least_once_per_week():
                     clause.append(get_variable(player, position, group, week))
             print(clause)
             sat_solver.add_clause(clause)
-
-
+            
+def get_commander_variable(golfer, week, group):
+    return golfer * 10000 + week * 100 + group
+              
 # (AMO) Each golfer plays at most once in each group each week
 def assign_golfers_to_groups():
+    groups = {}
     for golfer in range(1, num_players + 1):
         for week in range(1, num_weeks + 1):
             for position in range(1, players_per_group + 1):
                 for group in range(1, num_groups + 1):
+                    commander = get_commander_variable(golfer, week, group)
+                    if group not in groups:
+                        groups[group] = commander
                     for other_group in range(group + 1, num_groups + 1):
                         for other_position in range(1, players_per_group + 1):
                             clause = [-1 * get_variable(golfer, position, group, week),
-                                      -1 * get_variable(golfer, other_position, other_group, week)]
+                                      -1 * get_variable(golfer, other_position, other_group, week),
+                                      -1 * commander]
                             sat_solver.add_clause(clause)
+
+    # Add the constraints for the commander variables
+    for group, commander in groups.items():
+        for other_group, other_commander in groups.items():
+            if group != other_group:
+                clause = [-1 * commander, -1 * other_commander]
+                sat_solver.add_clause(clause)
 
 
 # AMO_No golfer plays in more than one group each week
 def ensure_golfer_plays_in_one_group_per_week():
+    groups = {}
     for player in range(1, num_players + 1):
         for week in range(1, num_weeks + 1):
             for position in range(1, players_per_group + 1):
                 for group in range(1, num_groups + 1):
+                    # Create a new commander variable for each group
+                    commander = get_commander_variable(player, week, group)
+                    if group not in groups:
+                        groups[group] = commander
                     for next_group in range(group + 1, num_groups + 1):
                         for next_position in range(1, players_per_group + 1):
                             clause = [-1 * get_variable(player, position, group, week),
-                                      -1 * get_variable(player, next_position, next_group, week)]
+                                      -1 * get_variable(player, next_position, next_group, week),
+                                      -1 * commander]
                             sat_solver.add_clause(clause)
+    # Add the constraints for the commander variables
+    for group, commander in groups.items():
+        for next_group, next_commander in groups.items():
+            if group != next_group:
+                clause = [-1 * commander, -1 * next_commander]
+                sat_solver.add_clause(clause)
 
 # (ALO) ensure each player appears only once in a group in a week
 def ensure_unique_player_in_group_per_week():
