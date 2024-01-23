@@ -40,10 +40,17 @@ def ensure_golfer_plays_at_least_once_per_week():
 
 # (AMO) Each golfer plays at most once in each group each week
 def assign_golfers_to_groups():
+    half = num_groups // 2
     for golfer in range(1, num_players + 1):
         for week in range(1, num_weeks + 1):
             for position in range(1, players_per_group + 1):
-                for group in range(1, num_groups + 1):
+                for group in range(1, half + 1):
+                    for other_group in range(group + 1, half + 1):
+                        for other_position in range(1, players_per_group + 1):
+                            clause = [-1 * get_variable(golfer, position, group, week),
+                                      -1 * get_variable(golfer, other_position, other_group, week)]
+                            sat_solver.add_clause(clause)
+                for group in range(half + 1, num_groups + 1):
                     for other_group in range(group + 1, num_groups + 1):
                         for other_position in range(1, players_per_group + 1):
                             clause = [-1 * get_variable(golfer, position, group, week),
@@ -53,10 +60,17 @@ def assign_golfers_to_groups():
 
 # AMO_No golfer plays in more than one group each week
 def ensure_golfer_plays_in_one_group_per_week():
+    half = num_groups // 2
     for player in range(1, num_players + 1):
         for week in range(1, num_weeks + 1):
             for position in range(1, players_per_group + 1):
-                for group in range(1, num_groups + 1):
+                for group in range(1, half + 1):
+                    for next_group in range(group + 1, half + 1):
+                        for next_position in range(1, players_per_group + 1):
+                            clause = [-1 * get_variable(player, position, group, week),
+                                      -1 * get_variable(player, next_position, next_group, week)]
+                            sat_solver.add_clause(clause)
+                for group in range(half + 1, num_groups + 1):
                     for next_group in range(group + 1, num_groups + 1):
                         for next_position in range(1, players_per_group + 1):
                             clause = [-1 * get_variable(player, position, group, week),
