@@ -2,6 +2,12 @@ from pysat.solvers import Glucose3, Solver
 from prettytable import PrettyTable
 from threading import Timer
 import datetime
+import pandas as pd
+import os
+from openpyxl import load_workbook
+from openpyxl import Workbook
+from zipfile import BadZipFile
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 num_weeks: int  # number of weeks
 players_per_group: int  # players per group
@@ -287,7 +293,7 @@ def change_showing_additional_info():
 def interrupt(s):
     s.interrupt()
 
-# solve the problem using the SAT Solver and write the results to text file: out/results_datetime.txt
+# solve the problem using the SAT Solver and write the results to xlsx file
 def solve_sat_problem():
     global num_players, sat_solver
     num_players = players_per_group * num_groups
@@ -308,53 +314,87 @@ def solve_sat_problem():
 
     sat_status = sat_solver.solve_limited(expect_interrupt=True)
 
+    result_dict = {
+        "Problem": f"{num_weeks}-{players_per_group}-{num_groups}",
+        "Time": "",
+        "Result": "",
+        "Variables": 0,
+        "Clauses": 0
+    }
+
     if sat_status is False:
         print("\nNot found. There is no solution.")
+        result_dict["Result"] = "unsat"
     else:
         solution = sat_solver.get_model()
-    if solution is None:
-        print("Not found. Time exceeded (" + '{0:.2f}s'.format(sat_solver.time()) + ").\n")
-    else:
-        print(
-            "A solution was found in time " + '{0:.2f}s'.format(sat_solver.time()) + ". Generating it now.\n")
-        result = []
-        for v in solution:
-            if v > 0:
-                ijkl = resolve_variable(v)
-                if len(ijkl) == 3:
-                    golfer, group, week = ijkl
-                    result.append({"golfer": golfer, "group": group, "week": week})
+        if solution is None:
+            print("Not found. Time exceeded (" + '{0:.2f}s'.format(sat_solver.time()) + ").\n")
+            result_dict["Result"] = "unsat"
+        else:
+            print(
+                "A solution was found in time " + '{0:.2f}s'.format(sat_solver.time()) + ". Generating it now.\n")
+            result_dict["Result"] = "sat"
 
-        final_result = process_results(result)
-        show_results(final_result)
+            results = []
+            for v in solution:
+                if v > 0:
+                    ijkl = resolve_variable(v)
+                    if len(ijkl) == 3:
+                        golfer, group, week = ijkl
+                        results.append({"golfer": golfer, "group": group, "week": week})
 
-        if show_additional_info:
-            sat_accum_stats = sat_solver.accum_stats()
-            print("Restarts: " +
-                  str(sat_accum_stats['restarts']) +
-                  ", conflicts: " +
-                  ", decisions: " +
-                  str(sat_accum_stats['decisions']) +
-                  ", propagations: " +
-                  str(sat_accum_stats["propagations"]))
+            final_result = process_results(results)
+            show_results(final_result)
 
-        input("Press Enter to continue...")
+            if show_additional_info:
+                sat_accum_stats = sat_solver.accum_stats()
+                print("Restarts: " +
+                      str(sat_accum_stats['restarts']) +
+                      ", conflicts: " +
+                      ", decisions: " +
+                      str(sat_accum_stats['decisions']) +
+                      ", propagations: " +
+                      str(sat_accum_stats["propagations"]))
 
-    sat_solver.delete()
+            result_dict["Time"] = '{0:.2f}s'.format(sat_solver.time())
+            result_dict["Variables"] = sat_solver.nof_vars()
+            result_dict["Clauses"] = sat_solver.nof_clauses()
 
-    # Get the current date and time
-    current_datetime = datetime.datetime.now()
+            sat_solver.delete()
 
-    # Create the file path
-    file_path = "out/results_" + current_datetime.strftime("%Y%m%d_%H%M%S") + ".txt"
+            # Append the result to a list
+            excel_results = []
+            excel_results.append(result_dict)
 
-    # Write the result to the file
-    with open(file_path, "w") as f:
-        f.write("Solution:\n")
-        for r in final_result:
-            f.write(f"Golfer: {r['golfer']}, Group: {r['group']}, Week: {r['week']}\n")
+            # Write the results to an Excel file
+            df = pd.DataFrame(excel_results)
+            excel_file_path = f"out/results.xlsx"
+            
+            # Check if the file already exists
+            if os.path.exists(excel_file_path):
+                try:
+                    book = load_workbook(excel_file_path)
+                except BadZipFile:
+                    book = Workbook()  # Create a new workbook if the file is not a valid Excel file
 
-    print("Result written to file:", file_path)
+                # Check if the 'Results' sheet exists
+                if 'Results' not in book.sheetnames:
+                    book.create_sheet('Results')  # Create 'Results' sheet if it doesn't exist
+
+                sheet = book['Results']
+
+                for row in dataframe_to_rows(df, index=False, header=False):
+                    sheet.append(row)
+
+                book.save(excel_file_path)
+
+            else:
+                df.to_excel(excel_file_path, index=False, sheet_name='Results', header=False)
+
+            print("Result written to Excel file:", os.path.abspath(excel_file_path))  # Print full path
+            print("Result added to Excel file.")
+
+
 
 # read input data from file data.txt (many lines, each line is number of weeks, number of players per group, number of groups)
 # solve the problem
