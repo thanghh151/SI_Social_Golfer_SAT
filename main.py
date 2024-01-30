@@ -4,7 +4,7 @@ def run_script(script_name):
     subprocess.run(["python", script_name])
 
 def main():
-    scripts = ["binominal.py", "binary.py", "commander.py", "sequential.py", "product.py"]
+    scripts = ["binomial.py", "binary.py", "commander.py", "sequential.py", "product.py"]
     for script in scripts:
         run_script(script)
 
