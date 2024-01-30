@@ -316,7 +316,7 @@ def solve_sat_problem():
 
     result_dict = {
         "Problem": f"{num_weeks}-{players_per_group}-{num_groups}",
-        "Type": "binominal",
+        "Type": "binomial",
         "Time": "",
         "Result": "",
         "Variables": 0,
