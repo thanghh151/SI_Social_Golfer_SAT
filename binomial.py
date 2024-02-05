@@ -8,6 +8,7 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 from zipfile import BadZipFile
 from openpyxl.utils.dataframe import dataframe_to_rows
+import time
 
 num_weeks: int  # number of weeks
 players_per_group: int  # players per group
@@ -312,6 +313,7 @@ def solve_sat_problem():
     timer = Timer(time_budget, interrupt, [sat_solver])
     timer.start()
 
+    start_time = time.time()
     sat_status = sat_solver.solve_limited(expect_interrupt=True)
 
     result_dict = {
@@ -323,77 +325,79 @@ def solve_sat_problem():
         "Clauses": 0
     }
 
-    if sat_status is False:
-        print("\nNot found. There is no solution.")
+    
+    solution = sat_solver.get_model()
+    if solution is None:
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print("Not found. Time exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
         result_dict["Result"] = "unsat"
+        result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
+        result_dict["Variables"] = sat_solver.nof_vars()
+        result_dict["Clauses"] = sat_solver.nof_clauses()
     else:
-        solution = sat_solver.get_model()
-        if solution is None:
-            print("Not found. Time exceeded (" + '{0:.2f}s'.format(sat_solver.time()) + ").\n")
-            result_dict["Result"] = "unsat"
-        else:
-            print(
-                "A solution was found in time " + '{0:.2f}s'.format(sat_solver.time()) + ". Generating it now.\n")
-            result_dict["Result"] = "sat"
+        print(
+            "A solution was found in time " + '{0:.3f}s'.format(sat_solver.time()) + ". Generating it now.\n")
+        result_dict["Result"] = "sat"
 
-            results = []
-            for v in solution:
-                if v > 0:
-                    ijkl = resolve_variable(v)
-                    if len(ijkl) == 3:
-                        golfer, group, week = ijkl
-                        results.append({"golfer": golfer, "group": group, "week": week})
+        results = []
+        for v in solution:
+            if v > 0:
+                ijkl = resolve_variable(v)
+                if len(ijkl) == 3:
+                    golfer, group, week = ijkl
+                    results.append({"golfer": golfer, "group": group, "week": week})
 
-            final_result = process_results(results)
-            show_results(final_result)
+        final_result = process_results(results)
+        show_results(final_result)
 
-            if show_additional_info:
-                sat_accum_stats = sat_solver.accum_stats()
-                print("Restarts: " +
-                      str(sat_accum_stats['restarts']) +
-                      ", conflicts: " +
-                      ", decisions: " +
-                      str(sat_accum_stats['decisions']) +
-                      ", propagations: " +
-                      str(sat_accum_stats["propagations"]))
+        if show_additional_info:
+            sat_accum_stats = sat_solver.accum_stats()
+            print("Restarts: " +
+                    str(sat_accum_stats['restarts']) +
+                    ", conflicts: " +
+                    ", decisions: " +
+                    str(sat_accum_stats['decisions']) +
+                    ", propagations: " +
+                    str(sat_accum_stats["propagations"]))
 
-            result_dict["Time"] = '{0:.2f}s'.format(sat_solver.time())
-            result_dict["Variables"] = sat_solver.nof_vars()
-            result_dict["Clauses"] = sat_solver.nof_clauses()
+        result_dict["Time"] = '{0:.3f}'.format(sat_solver.time())
+        result_dict["Variables"] = sat_solver.nof_vars()
+        result_dict["Clauses"] = sat_solver.nof_clauses()
 
-            sat_solver.delete()
+        sat_solver.delete()
 
-            # Append the result to a list
-            excel_results = []
-            excel_results.append(result_dict)
+    # Append the result to a list
+    excel_results = []
+    excel_results.append(result_dict)
 
-            # Write the results to an Excel file
-            df = pd.DataFrame(excel_results)
-            excel_file_path = f"out/results.xlsx"
-            
-            # Check if the file already exists
-            if os.path.exists(excel_file_path):
-                try:
-                    book = load_workbook(excel_file_path)
-                except BadZipFile:
-                    book = Workbook()  # Create a new workbook if the file is not a valid Excel file
+    # Write the results to an Excel file
+    df = pd.DataFrame(excel_results)
+    excel_file_path = f"out/results.xlsx"
+        
+    # Check if the file already exists
+    if os.path.exists(excel_file_path):
+        try:
+            book = load_workbook(excel_file_path)
+        except BadZipFile:
+            book = Workbook()  # Create a new workbook if the file is not a valid Excel file
 
-                # Check if the 'Results' sheet exists
-                if 'Results' not in book.sheetnames:
-                    book.create_sheet('Results')  # Create 'Results' sheet if it doesn't exist
+        # Check if the 'Results' sheet exists
+        if 'Results' not in book.sheetnames:
+            book.create_sheet('Results')  # Create 'Results' sheet if it doesn't exist
 
-                sheet = book['Results']
+        sheet = book['Results']
 
-                for row in dataframe_to_rows(df, index=False, header=False):
-                    sheet.append(row)
+        for row in dataframe_to_rows(df, index=False, header=False):
+            sheet.append(row)
 
-                book.save(excel_file_path)
+        book.save(excel_file_path)
 
-            else:
-                df.to_excel(excel_file_path, index=False, sheet_name='Results', header=False)
+    else:
+        df.to_excel(excel_file_path, index=False, sheet_name='Results', header=False)
 
-            print("Result written to Excel file:", os.path.abspath(excel_file_path))  # Print full path
-            print("Result added to Excel file.")
+    print("Result written to Excel file:", os.path.abspath(excel_file_path))  # Print full path
+    print("Result added to Excel file.")
 
 
 
