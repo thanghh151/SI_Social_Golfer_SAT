@@ -20,6 +20,7 @@ show_additional_info_str = "Yes"
 
 sat_solver: Solver
 
+all_clauses = []
 
 def generate_all_clauses():
     ensure_golfer_plays_at_least_once_per_week()
@@ -43,6 +44,7 @@ def ensure_golfer_plays_at_least_once_per_week():
                     clause.append(get_variable(player, position, group, week))
             print(clause)
             sat_solver.add_clause(clause)
+            all_clauses.append(clause)
 
 
 # (AMO) Each golfer plays at most once in each group each week
@@ -56,6 +58,7 @@ def assign_golfers_to_groups():
                             clause = [-1 * get_variable(golfer, position, group, week),
                                       -1 * get_variable(golfer, other_position, other_group, week)]
                             sat_solver.add_clause(clause)
+                            all_clauses.append(clause)
 
 
 # AMO_No golfer plays in more than one group each week
@@ -69,6 +72,7 @@ def ensure_golfer_plays_in_one_group_per_week():
                             clause = [-1 * get_variable(player, position, group, week),
                                       -1 * get_variable(player, next_position, next_group, week)]
                             sat_solver.add_clause(clause)
+                            all_clauses.append(clause)
 
 # (ALO) ensure each player appears only once in a group in a week
 def ensure_unique_player_in_group_per_week():
@@ -79,6 +83,7 @@ def ensure_unique_player_in_group_per_week():
                 for golfer in range(1, num_players + 1):
                     clause.append(get_variable(golfer, position, group, week))
                 sat_solver.add_clause(clause)
+                all_clauses.append(clause)
 
 # (ALO) ensure no two players occupy the same position in the same group in the same week
 def ensure_unique_position_for_player_in_group():
@@ -90,6 +95,7 @@ def ensure_unique_position_for_player_in_group():
                         clause = [-1 * get_variable(golfer, position, group, week),
                                   -1 * get_variable(golfer, other_position, group, week)]
                         sat_solver.add_clause(clause)
+                        all_clauses.append(clause)
 
 
 # This is a clause combining two sets of variables, ijkl and ikl
@@ -105,6 +111,7 @@ def ensure_player_in_group_if_assigned_to_week():
                                -1 * get_variable(golfer, position, group, week)]
                     sat_solver.add_clause(clause2)
                 sat_solver.add_clause(clause)
+                all_clauses.append(clause)
 
 
 # If two players m and n play in the same group k in week l, they cannot play together in any group together in future weeks
@@ -120,6 +127,7 @@ def ensure_no_repeated_players_in_groups():
                                       -1 * get_variable2(golfer1, other_group, other_week),
                                       -1 * get_variable2(golfer2, other_group, other_week)]
                             sat_solver.add_clause(clause)
+                            all_clauses.append(clause)
 
 #(ALO) ensure no two players occupy the same position in the same group in the same week
 def generate_symmetry_breaking_clause1():
@@ -131,6 +139,7 @@ def generate_symmetry_breaking_clause1():
                         clause = [-1 * get_variable(golfer1, position1, group, week),
                                   -1 * get_variable(golfer2, position1 + 1, group, week)]
                         sat_solver.add_clause(clause)
+                        all_clauses.append(clause)
 
 # A player cannot be in the first position of a group in a week if they are in the first position of the next group in the same week
 def generate_symmetry_breaking_clause2():
@@ -141,6 +150,7 @@ def generate_symmetry_breaking_clause2():
                     clause = [-1 * get_variable(golfer1, 1, group, week),
                               -1 * get_variable(golfer2, 1, group + 1, week)]
                     sat_solver.add_clause(clause)
+                    all_clauses.append(clause)
 
 #A player cannot be in the second position of the first group in a week if they are in the second position of the first group in the next week
 def generate_symmetry_breaking_clause3():
@@ -150,6 +160,7 @@ def generate_symmetry_breaking_clause3():
                 clause = [-1 * get_variable(golfer1, 2, 1, week),
                           -1 * get_variable(golfer2, 2, 1, week + 1)]
                 sat_solver.add_clause(clause)
+                all_clauses.append(clause)
 
 # returns a unique identifier for the variable that represents the assignment of the golfer to the position in the group in the week
 def get_variable(golfer, position, group, week):
@@ -293,11 +304,14 @@ def change_showing_additional_info():
 
 def interrupt(s):
     s.interrupt()
-
+    
 # solve the problem using the SAT Solver and write the results to xlsx file
 def solve_sat_problem():
     global num_players, sat_solver
     num_players = players_per_group * num_groups
+    
+    # Clear the all_clauses list
+    all_clauses.clear()
 
     print("\nGenerating a problem.")
 
@@ -398,6 +412,29 @@ def solve_sat_problem():
 
     print("Result written to Excel file:", os.path.abspath(excel_file_path))  # Print full path
     print("Result added to Excel file.")
+    
+    # Create the directory if it doesn't exist
+    directory_path = "input_v1"
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+
+    # Create the full path to the file "{problem}.cnf" in the directory "input_v1"
+    problem_name = f"{num_weeks}-{players_per_group}-{num_groups}"
+    file_name = problem_name + ".cnf"
+    file_path = os.path.join(directory_path, file_name)
+
+    # Write data to the file
+    with open(file_path, 'w') as writer:
+        # Write a line of information about the number of variables and constraints
+        writer.write("p cnf " + str(sat_solver.nof_vars()) + " " + str(sat_solver.nof_clauses()) + "\n")
+
+        # Write each clause to the file
+        for clause in all_clauses:
+            for literal in clause:
+                writer.write(str(literal) + " ")
+            writer.write("0\n")
+
+    print("CNF written to " + file_path)
 
 
 
