@@ -317,6 +317,10 @@ def solve_sat_problem():
 
     sat_solver = Glucose3(use_timer=True)
     generate_all_clauses()
+    
+    # Store the number of variables and clauses before solving the problem
+    num_vars = sat_solver.nof_vars()
+    num_clauses = sat_solver.nof_clauses()
 
     if show_additional_info:
         print("Clauses: " + str(sat_solver.nof_clauses()))
@@ -426,7 +430,7 @@ def solve_sat_problem():
     # Write data to the file
     with open(file_path, 'w') as writer:
         # Write a line of information about the number of variables and constraints
-        writer.write("p cnf " + str(sat_solver.nof_vars()) + " " + str(sat_solver.nof_clauses()) + "\n")
+        writer.write("p cnf " + str(num_vars) + " " + str(num_clauses) + "\n")
 
         # Write each clause to the file
         for clause in all_clauses:
