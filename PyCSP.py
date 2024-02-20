@@ -121,8 +121,6 @@ for data in data_list:
     if __name__ == '__main__':
         p = Process(target=solve_problem, args=(data,))
         p.start()
-
-        # Wait for 10 seconds or until process finishes
         p.join(20)
 
         # If thread is still active
