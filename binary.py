@@ -9,6 +9,7 @@ from openpyxl import Workbook
 from zipfile import BadZipFile
 from openpyxl.utils.dataframe import dataframe_to_rows
 import time
+import math
 
 num_weeks: int  # number of weeks
 players_per_group: int  # players per group
@@ -49,30 +50,40 @@ def ensure_golfer_plays_at_least_once_per_week():
 
 # (AMO) Each golfer plays at most once in each group each week
 def assign_golfers_to_groups():
+    k = len(bin(num_players)[2:])  # number of binary digits needed to represent num_players
     for golfer in range(1, num_players + 1):
+        golfer_binary = [int(x) for x in bin(golfer)[2:].zfill(k)]  # binary representation of golfer
         for week in range(1, num_weeks + 1):
-            for position in range(1, players_per_group + 1):
-                for group in range(1, num_groups + 1):
-                    for other_group in range(group + 1, num_groups + 1):
-                        for other_position in range(1, players_per_group + 1):
-                            clause = [-1 * get_variable(golfer, position, group, week),
-                                      -1 * get_variable(golfer, other_position, other_group, week)]
-                            sat_solver.add_clause(clause)
-                            all_clauses.append(clause)
+            for group in range(1, num_groups + 1):
+                for position in range(1, players_per_group + 1):
+                    Y = [0] * k  # new variables Y1, Y2, ..., Yk
+                    for j in range(k):
+                        if golfer_binary[j] == 1:
+                            Y[j] = get_variable(golfer, position, group, week)  # assign Yj to Xi if j-th digit is 1
+                        else:
+                            Y[j] = -1 * get_variable(golfer, position, group, week)  # assign ¬Yj to Xi if j-th digit is 0
+                    clause = [-1 * get_variable(golfer, position, group, week)] + Y
+                    sat_solver.add_clause(clause)
+                    all_clauses.append(clause)
 
 
 # AMO_No golfer plays in more than one group each week
 def ensure_golfer_plays_in_one_group_per_week():
+    k = len(bin(num_players)[2:])  # number of binary digits needed to represent num_players
     for player in range(1, num_players + 1):
+        player_binary = [int(x) for x in bin(player)[2:].zfill(k)]  # binary representation of player
         for week in range(1, num_weeks + 1):
-            for position in range(1, players_per_group + 1):
-                for group in range(1, num_groups + 1):
-                    for next_group in range(group + 1, num_groups + 1):
-                        for next_position in range(1, players_per_group + 1):
-                            clause = [-1 * get_variable(player, position, group, week),
-                                      -1 * get_variable(player, next_position, next_group, week)]
-                            sat_solver.add_clause(clause)
-                            all_clauses.append(clause)
+            for group in range(1, num_groups + 1):
+                Y = [0] * k  # new variables Y1, Y2, ..., Yk
+                for position in range(1, players_per_group + 1):
+                    for j in range(k):
+                        if player_binary[j] == 1:
+                            Y[j] = get_variable(player, position, group, week)  # assign Yj to Xi if j-th digit is 1
+                        else:
+                            Y[j] = -1 * get_variable(player, position, group, week)  # assign ¬Yj to Xi if j-th digit is 0
+                    clause = [-1 * get_variable(player, position, group, week)] + Y
+                    sat_solver.add_clause(clause)
+                    all_clauses.append(clause)
 
 # (ALO) ensure each player appears only once in a group in a week
 def ensure_unique_player_in_group_per_week():
