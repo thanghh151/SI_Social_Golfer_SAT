@@ -21,6 +21,7 @@ show_additional_info_str = "Yes"
 sat_solver: Solver
 
 all_clauses = []
+id_counter = 1
 
 def generate_all_clauses():
     ensure_golfer_plays_at_least_once_per_week()
@@ -350,7 +351,10 @@ def solve_sat_problem():
     start_time = time.time()
     sat_status = sat_solver.solve_limited(expect_interrupt=True)
 
+    global id_counter
+
     result_dict = {
+        "ID": id_counter,
         "Problem": f"{num_weeks}-{players_per_group}-{num_groups}",
         "Type": "product",
         "Time": "",
@@ -358,6 +362,8 @@ def solve_sat_problem():
         "Variables": 0,
         "Clauses": 0
     }
+    
+    id_counter += 1
 
     
     solution = sat_solver.get_model()

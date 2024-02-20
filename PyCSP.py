@@ -7,6 +7,13 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from zipfile import BadZipFile
 from openpyxl import Workbook
 import os
+from datetime import datetime
+from multiprocessing import Process
+
+def solve_problem(data):
+    solve_social_golfers(data)
+
+id_counter = 1
 
 def solve_social_golfers(data):
     clear()
@@ -34,15 +41,23 @@ def solve_social_golfers(data):
         LexIncreasing(x, matrix=True)
     )
     
-    solve_time = time.time() - start_time
+
+    global id_counter
 
     result_dict = {
+        "ID": id_counter,
         "Problem": f"{nWeeks}-{size}-{nGroups}",
         "Type": "PyCSP",
         "Time": "",
         "Result": "",
         "Variables": 0,
+        "Clauses": 0,
     }
+    
+    id_counter += 1
+    solve_result = solve()
+    solve_time = time.time() - start_time
+    
     if solve() is SAT:
         results = []
         for w in range(nWeeks):
@@ -53,18 +68,22 @@ def solve_social_golfers(data):
         result_dict["Result"] = "sat"
         result_dict["Time"] = '{0:.3f}'.format(solve_time)
         result_dict["Variables"] = nWeeks * nPlayers
+        result_dict["Clauses"] = len(posted())
     else:
         result_dict["Result"] = "unsat"
         result_dict["Time"] = '{0:.3f}'.format(solve_time)
         result_dict["Variables"] = nWeeks * nPlayers
+        result_dict["Clauses"] = len(posted())
 
     # Append the result to a list
     excel_results = []
     excel_results.append(result_dict)
 
+
     # Write the results to an Excel file
     df = pd.DataFrame(excel_results)
-    excel_file_path = f"out/results.xlsx"
+    current_date = datetime.now().strftime('%Y-%m-%d')
+    excel_file_path = f"out/results_{current_date}.xlsx"
         
     # Check if the file already exists
     if os.path.exists(excel_file_path):
@@ -99,4 +118,15 @@ with open("data.txt") as file:
 
 # Solve for each set of data
 for data in data_list:
-    solve_social_golfers(data)
+    if __name__ == '__main__':
+        p = Process(target=solve_problem, args=(data,))
+        p.start()
+
+        # Wait for 10 seconds or until process finishes
+        p.join(20)
+
+        # If thread is still active
+        if p.is_alive():
+            print("Solver timed out.")
+            p.terminate()
+            p.join()
