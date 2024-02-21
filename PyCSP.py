@@ -8,14 +8,12 @@ from zipfile import BadZipFile
 from openpyxl import Workbook
 import os
 from datetime import datetime
-from multiprocessing import Process
+import concurrent.futures
+import multiprocessing
+from multiprocessing import Value
 
-def solve_problem(data):
-    solve_social_golfers(data)
 
-id_counter = 1
-
-def solve_social_golfers(data):
+def solve_social_golfers(data, result_dict, clauses):
     clear()
     nWeeks, size, nGroups = data
     nPlayers = nGroups * size
@@ -24,8 +22,6 @@ def solve_social_golfers(data):
 
     # x[w][p] is the group admitting on week w the player p
     x = VarArray(size=[nWeeks, nPlayers], dom=range(nGroups))
-    
-    start_time = time.time()
 
     satisfy(
         # ensuring that two players don't meet more than one time
@@ -41,24 +37,12 @@ def solve_social_golfers(data):
         LexIncreasing(x, matrix=True)
     )
     
-
-    global id_counter
-
-    result_dict = {
-        "ID": id_counter,
-        "Problem": f"{nWeeks}-{size}-{nGroups}",
-        "Type": "PyCSP",
-        "Time": "",
-        "Result": "",
-        "Variables": 0,
-        "Clauses": 0,
-    }
-    
-    id_counter += 1
+    # solve_time = time.time() - start_time
+    clauses.value = result_dict["Clauses"] = len(posted())
+    start_time = time.time()
     solve_result = solve()
     solve_time = time.time() - start_time
-    
-    if solve() is SAT:
+    if solve_result is SAT:
         results = []
         for w in range(nWeeks):
             print("Groups of week ", w , [[p for p in range(nPlayers) if x[w][p].value == g] for g in range(nGroups)])
@@ -66,35 +50,27 @@ def solve_social_golfers(data):
                 results.append({"week": w, "group": g, "players": [p for p in range(nPlayers) if x[w][p].value == g]})
         print(f"Constraints: {nGroups * (nWeeks-1) * size}; Variables: {nWeeks * nPlayers}; Time: {solve_time:.4f} seconds")
         result_dict["Result"] = "sat"
-        result_dict["Time"] = '{0:.3f}'.format(solve_time)
-        result_dict["Variables"] = nWeeks * nPlayers
-        result_dict["Clauses"] = len(posted())
     else:
         result_dict["Result"] = "unsat"
-        result_dict["Time"] = '{0:.3f}'.format(solve_time)
-        result_dict["Variables"] = nWeeks * nPlayers
-        result_dict["Clauses"] = len(posted())
+    result_dict["Time"] = '{0:.3f}'.format(solve_time)
+    write_results_to_excel(result_dict)
 
-    # Append the result to a list
+def write_results_to_excel(results):
     excel_results = []
-    excel_results.append(result_dict)
+    excel_results.append(results)
 
-
-    # Write the results to an Excel file
     df = pd.DataFrame(excel_results)
     current_date = datetime.now().strftime('%Y-%m-%d')
     excel_file_path = f"out/results_{current_date}.xlsx"
-        
-    # Check if the file already exists
+
     if os.path.exists(excel_file_path):
         try:
             book = load_workbook(excel_file_path)
         except BadZipFile:
-            book = Workbook()  # Create a new workbook if the file is not a valid Excel file
+            book = Workbook()
 
-        # Check if the 'Results' sheet exists
         if 'Results' not in book.sheetnames:
-            book.create_sheet('Results')  # Create 'Results' sheet if it doesn't exist
+            book.create_sheet('Results')
 
         sheet = book['Results']
 
@@ -106,25 +82,51 @@ def solve_social_golfers(data):
     else:
         df.to_excel(excel_file_path, index=False, sheet_name='Results', header=False)
 
-    print("Result written to Excel file:", os.path.abspath(excel_file_path))  # Print full path
+    print("Result written to Excel file:", os.path.abspath(excel_file_path))
     print("Result added to Excel file.")
 
-# Read data from file
-data_list = []
-with open("data.txt") as file:
-    for line in file:
-        if line[0] != "#":
-            data_list.append([int(x) for x in line.split()])
+id_counter = 1
 
-# Solve for each set of data
-for data in data_list:
-    if __name__ == '__main__':
-        p = Process(target=solve_problem, args=(data,))
+if __name__ == "__main__":
+    # Read data from file
+    data_list = []
+    with open("data.txt") as file:
+        for line in file:
+            if line[0] != "#":
+                data_list.append([int(x) for x in line.split()])
+
+    # Solve for each set of data
+    for data in data_list:
+        nWeeks, size, nGroups = data
+        nPlayers = nGroups * size
+        clauses = Value('i', 0)
+        result_dict = {
+            "ID": id_counter,
+            "Problem": f"{nWeeks}-{size}-{nGroups}",
+            "Type": "PyCSP",
+            "Time": "",
+            "Result": "",
+            "Variables": 0,
+            "Clauses": 0
+        }
+        id_counter += 1
+        result_dict["Variables"] = nWeeks * nPlayers
+        result_dict["Clauses"] = clauses.value
+        # Create a Process
+        p = multiprocessing.Process(target=solve_social_golfers, args=(data, result_dict, clauses,))
         p.start()
-        p.join(20)
+
+        # Wait for 10 seconds or until process finishes
+        p.join(10)
 
         # If thread is still active
         if p.is_alive():
-            print("Solver timed out.")
+            result_dict["Result"] = "timeout"
+            result_dict["Time"] = "10.000"
+            result_dict["Clauses"] = clauses.value
+            write_results_to_excel(result_dict)
+            print("solve() function took too long to complete... let's kill it...")
             p.terminate()
-            p.join()
+            print("Process killed.")
+        else:
+            print("solve() completed")

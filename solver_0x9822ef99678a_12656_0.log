@@ -1,0 +1,35 @@
+
+ACE v2.1 
+
+  instance
+    name:PyCSP
+
+  Loading variables...
+
+  Loading constraints...
+
+  domains
+    types:1  values:1568  sizes:[7:224]
+  variables
+    count:224  arrays:1  degrees:[168:4,169:112,170:108]
+  constraints
+    count:9302  specific:62  groups:2  arities:[4:9240,8:55,56:4,112:3]
+    distribution:[Cardinality:4,ConstraintIntension:9240,LexicographicLE:58]
+    intStructures:(1,shared:9239)
+    wck:2.79  cpu:2.968  mem:125M586
+
+  Building solver... 
+
+  solver
+    guaranteedAC:true
+    wck:2.85  cpu:3.031  mem:140M266
+
+  preprocessing
+    revisions:(36960,useless=36960)  values:1568  unsat:false
+    wck:0.078  cpu:3.109  mem:140M266
+
+    run0  dpts:49..53  effs:158  fails:10  wrgs:15  wck:0.00  ngds:4
+    run1  dpts:1..8  effs:1203  fails:21  wrgs:38  wck:0.22  ngds:6
+    run2  dpts:0..5  effs:1697  fails:33  wrgs:59  wck:0.44  ngds:13
+    run3  dpts:0..7  effs:2358  fails:46  wrgs:73  wck:0.53  ngds:25
+    run4  dpts:0..8  effs:3059  fails:60  wrgs:89  wck:0.66  ngds:31

@@ -1,0 +1,66 @@
+
+ACE v2.1 
+
+  instance
+    name:PyCSP
+
+  Loading variables...
+
+  Loading constraints...
+
+  domains
+    types:1  values:735  sizes:[7:105]
+  variables
+    count:105  arrays:1  degrees:[83:4,84:44,85:57]
+  constraints
+    count:2129  specific:29  groups:2  arities:[4:2100,10:20,21:5,42:4]
+    distribution:[Cardinality:5,ConstraintIntension:2100,LexicographicLE:24]
+    intStructures:(1,shared:2099)
+    wck:1.16  cpu:1.921  mem:57M174
+
+  Building solver... 
+
+  solver
+    guaranteedAC:true
+    wck:1.23  cpu:1.953  mem:60M846
+
+  preprocessing
+    revisions:(8400,useless=8400)  values:735  unsat:false
+    wck:0.054  cpu:1.968  mem:60M846
+
+    run0  dpts:32..81  effs:279  fails:10  wrgs:18  wck:0.00  ngds:5
+    run1  dpts:4..6  effs:437  fails:21  wrgs:30  wck:0.17  ngds:10
+    run2  dpts:0..12  effs:679  fails:33  wrgs:45  wck:0.20  ngds:14
+    run3  dpts:0..11  effs:842  fails:46  wrgs:59  wck:0.25  ngds:17
+    run4  dpts:0..13  effs:989  fails:60  wrgs:73  wck:0.27  ngds:27
+    run5  dpts:0..43  effs:1206  fails:76  wrgs:89  wck:0.28  ngds:40
+    run6  dpts:3..17  effs:1375  fails:93  wrgs:117  wck:0.32  ngds:42
+    run7  dpts:0..70  effs:1664  fails:112  wrgs:140  wck:0.33  ngds:56
+    run8  dpts:7..104  effs:1934  fails:119  wrgs:149  wck:0.36  ngds:56  sols:1
+
+  global
+    effs:1934  revisions:(456812,useless=456014)  ngds:56
+    stop:REACHED_GOAL  wrgs:149  sols:1  sol1Cpu:2.234
+    wck:1.63  cpu:2.234  mem:61M371
+
+
+  Solution 1 in JSON format:
+   {
+    x: [
+     [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6],
+     [0, 4, 5, 3, 5, 6, 0, 1, 6, 1, 2, 6, 3, 4, 5, 2, 3, 4, 0, 1, 2],
+     [5, 4, 6, 5, 3, 6, 3, 4, 0, 2, 3, 1, 2, 1, 0, 5, 4, 6, 2, 0, 1],
+     [6, 2, 4, 2, 1, 3, 0, 1, 4, 3, 2, 6, 5, 0, 3, 1, 0, 5, 4, 6, 5],
+     [6, 4, 5, 3, 1, 2, 0, 3, 4, 1, 2, 0, 5, 1, 6, 0, 2, 6, 3, 5, 4]
+    ]
+   }
+
+s SATISFIABLE
+
+v <instantiation id='sol1' type='solution'> <list> x[][] </list> <values> 0x3 1x3 2x3 3x3 4x3 5x3 6x3 0 4 5 3 5 6 0 1 6 1 2 6 3 4 5 2 3 4 0 1 2 5 4 6 5 3 6 3 4 0 2 3 1 2 1 0 5 4 6 2 0 1 6 2 4 2 1 3 0 1 4 3 2 6 5 0 3 1 0 5 4 6 5 6 4 5 3 1 2 0 3 4 1 2 0 5 1 6 0 2 6 3 5 4 </values> </instantiation>
+
+d WRONG DECISIONS 149
+d FOUND SOLUTIONS 1
+d INCOMPLETE EXPLORATION
+
+c real time : 2.25

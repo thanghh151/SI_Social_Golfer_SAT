@@ -1,0 +1,75 @@
+
+ACE v2.1 
+
+  instance
+    name:PyCSP
+
+  Loading variables...
+
+  Loading constraints...
+
+  domains
+    types:1  values:750  sizes:[5:150]
+  variables
+    count:150  arrays:1  degrees:[123:4,124:54,125:92]
+  constraints
+    count:4535  specific:35  groups:2  arities:[4:4500,12:24,25:6,50:5]
+    distribution:[Cardinality:6,ConstraintIntension:4500,LexicographicLE:29]
+    intStructures:(1,shared:4499)
+    wck:1.89  cpu:2.671  mem:71M290
+
+  Building solver... 
+
+  solver
+    guaranteedAC:true
+    wck:1.97  cpu:2.703  mem:78M103
+
+  preprocessing
+    revisions:(18000,useless=18000)  values:750  unsat:false
+    wck:0.047  cpu:2.75  mem:78M103
+
+    run0  dpts:49..58  effs:476  fails:10  wrgs:16  wck:0.00  ngds:5
+    run1  dpts:22..29  effs:817  fails:21  wrgs:33  wck:0.17  ngds:7
+    run2  dpts:0..12  effs:978  fails:33  wrgs:45  wck:0.23  ngds:16
+    run3  dpts:0..23  effs:1194  fails:46  wrgs:64  wck:0.27  ngds:20
+    run4  dpts:0..36  effs:1531  fails:60  wrgs:81  wck:0.28  ngds:27
+    run5  dpts:1..12  effs:1681  fails:76  wrgs:106  wck:0.33  ngds:31
+    run6  dpts:0..31  effs:1967  fails:93  wrgs:131  wck:0.34  ngds:39
+    run7  dpts:0..25  effs:2276  fails:112  wrgs:166  wck:0.38  ngds:46
+    run8  dpts:1..7  effs:2478  fails:133  wrgs:201  wck:0.42  ngds:50
+    run9  dpts:0..25  effs:2792  fails:156  wrgs:236  wck:0.44  ngds:60
+    run10  dpts:0..27  effs:3371  fails:181  wrgs:290  wck:0.47  ngds:65
+    run11  dpts:0..30  effs:3733  fails:209  wrgs:346  wck:0.53  ngds:73
+    run12  dpts:0..24  effs:4146  fails:240  wrgs:410  wck:0.58  ngds:80
+    run13  dpts:2..33  effs:4876  fails:274  wrgs:467  wck:0.64  ngds:88
+    run14  dpts:8..43  effs:5937  fails:311  wrgs:522  wck:0.70  ngds:103
+    run15  dpts:8..35  effs:6594  fails:352  wrgs:583  wck:0.78  ngds:117
+    run16  dpts:0..149  effs:7857  fails:396  wrgs:649  wck:0.83  ngds:117  sols:1
+
+  global
+    effs:7857  revisions:(1881082,useless=1875863)  ngds:117
+    stop:REACHED_GOAL  wrgs:649  sols:1  sol1Cpu:3.546
+    wck:2.88  cpu:3.546  mem:79M678
+
+
+  Solution 1 in JSON format:
+   {
+    x: [
+     [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4],
+     [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4],
+     [0, 3, 1, 4, 2, 4, 2, 0, 3, 1, 3, 1, 4, 2, 0, 2, 0, 3, 1, 4, 1, 4, 2, 0, 3],
+     [1, 2, 4, 3, 0, 2, 4, 3, 0, 1, 4, 3, 0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2, 4, 3],
+     [2, 0, 1, 3, 4, 1, 3, 4, 2, 0, 4, 2, 0, 1, 3, 0, 1, 3, 4, 2, 3, 4, 2, 0, 1],
+     [2, 3, 1, 4, 0, 0, 2, 3, 1, 4, 4, 0, 2, 3, 1, 1, 4, 0, 2, 3, 3, 1, 4, 0, 2]
+    ]
+   }
+
+s SATISFIABLE
+
+v <instantiation id='sol1' type='solution'> <list> x[][] </list> <values> 0x5 1x5 2x5 3x5 4x5 0 1 2 3 4 0 1 2 3 4 0 1 2 3 4 0 1 2 3 4 0 1 2 3 4 0 3 1 4 2 4 2 0 3 1 3 1 4 2 0 2 0 3 1 4 1 4 2 0 3 1 2 4 3 0 2 4 3 0 1 4 3 0 1 2 3 0 1 2 4 0 1 2 4 3 2 0 1 3 4 1 3 4 2 0 4 2 0 1 3 0 1 3 4 2 3 4 2 0 1 2 3 1 4 0 0 2 3 1 4 4 0 2 3 1 1 4 0 2 3 3 1 4 0 2 </values> </instantiation>
+
+d WRONG DECISIONS 649
+d FOUND SOLUTIONS 1
+d INCOMPLETE EXPLORATION
+
+c real time : 3.562

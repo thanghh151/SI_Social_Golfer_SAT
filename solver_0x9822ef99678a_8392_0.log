@@ -1,0 +1,42 @@
+
+ACE v2.1 
+
+  instance
+    name:PyCSP
+
+  Loading variables...
+
+  Loading constraints...
+
+  domains
+    types:1  values:1568  sizes:[7:224]
+  variables
+    count:224  arrays:1  degrees:[192:4,193:64,194:156]
+  constraints
+    count:10626  specific:42  groups:2  arities:[4:10584,16:27,28:8,56:7]
+    distribution:[Cardinality:8,ConstraintIntension:10584,LexicographicLE:34]
+    intStructures:(1,shared:10583)
+    wck:2.94  cpu:3.593  mem:128M281
+
+  Building solver... 
+
+  solver
+    guaranteedAC:true
+    wck:3.02  cpu:3.656  mem:144M534
+
+  preprocessing
+    revisions:(42336,useless=42336)  values:1568  unsat:false
+    wck:0.093  cpu:3.75  mem:144M534
+
+    run0  dpts:39..67  effs:253  fails:10  wrgs:16  wck:0.00  ngds:4
+    run1  dpts:5..7  effs:591  fails:21  wrgs:31  wck:0.27  ngds:8
+    run2  dpts:0..6  effs:808  fails:33  wrgs:47  wck:0.39  ngds:11
+    run3  dpts:0..4  effs:961  fails:46  wrgs:62  wck:0.44  ngds:15
+    run4  dpts:0..8  effs:1121  fails:60  wrgs:78  wck:0.47  ngds:23
+    run5  dpts:0..10  effs:1369  fails:76  wrgs:98  wck:0.50  ngds:33
+    run6  dpts:0..8  effs:1613  fails:93  wrgs:130  wck:0.56  ngds:39
+    run7  dpts:0..10  effs:1969  fails:112  wrgs:167  wck:0.62  ngds:41
+    run8  dpts:0..10  effs:2176  fails:133  wrgs:205  wck:0.72  ngds:47
+    run9  dpts:0..15  effs:2429  fails:156  wrgs:240  wck:0.78  ngds:53
+    run10  dpts:0..74  effs:2928  fails:181  wrgs:268  wck:0.84  ngds:72
+    run11  dpts:0..64  effs:3497  fails:209  wrgs:315  wck:1.01  ngds:85

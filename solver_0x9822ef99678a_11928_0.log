@@ -9,49 +9,36 @@ ACE v2.1
   Loading constraints...
 
   domains
-    types:1  values:108  sizes:[3:36]
+    types:1  values:288  sizes:[3:96]
   variables
-    count:36  arrays:1  degrees:[27:4,28:18,29:14]
+    count:96  arrays:1  degrees:[80:4,81:32,82:60]
   constraints
-    count:231  specific:15  groups:2  arities:[4:216,8:8,9:4,18:3]
-    distribution:[Cardinality:4,ConstraintIntension:216,LexicographicLE:11]
-    intStructures:(1,shared:215)
-    wck:0.50  cpu:1.25  mem:21M524
+    count:1874  specific:26  groups:2  arities:[4:1848,12:8,16:11,24:7]
+    distribution:[Cardinality:8,ConstraintIntension:1848,LexicographicLE:18]
+    intStructures:(1,shared:1847)
+    wck:2.12  cpu:2.187  mem:26M849
 
   Building solver... 
 
   solver
     guaranteedAC:true
-    wck:0.53  cpu:1.281  mem:23M621
+    wck:2.19  cpu:2.234  mem:30M517
 
   preprocessing
-    revisions:(864,useless=864)  values:108  unsat:false
-    wck:0.018  cpu:1.296  mem:23M621
+    revisions:(7392,useless=7392)  values:288  unsat:false
+    wck:0.023  cpu:2.234  mem:30M517
 
-    run0  dpts:-1..35  effs:36  wck:0.00  sols:1
+    run0  dpts:0..9  effs:91  fails:2  wrgs:12  wck:0.00
 
   global
-    effs:36  revisions:(3569,useless=3538)
-    stop:REACHED_GOAL  sols:1  sol1Cpu:1.312
-    wck:0.57  cpu:1.312  mem:23M831
+    effs:91  revisions:(26883,useless=26869)
+    stop:FULL_EXPLORATION  wrgs:12
+    wck:2.29  cpu:2.25  mem:31M44
 
+s UNSATISFIABLE
 
-  Solution 1 in JSON format:
-   {
-    x: [
-     [0, 0, 0, 1, 1, 1, 2, 2, 2],
-     [0, 1, 2, 0, 1, 2, 0, 1, 2],
-     [0, 1, 2, 1, 2, 0, 2, 0, 1],
-     [0, 1, 2, 2, 0, 1, 1, 2, 0]
-    ]
-   }
+d WRONG DECISIONS 12
+d FOUND SOLUTIONS 0
+d COMPLETE EXPLORATION
 
-s SATISFIABLE
-
-v <instantiation id='sol1' type='solution'> <list> x[][] </list> <values> 0x3 1x3 2x3 0 1 2 0 1 2 0 1 2 0 1 2 1 2 0 2 0 1 0 1 2 2 0 1 1 2 0 </values> </instantiation>
-
-d WRONG DECISIONS 0
-d FOUND SOLUTIONS 1
-d INCOMPLETE EXPLORATION
-
-c real time : 1.328
+c real time : 2.25

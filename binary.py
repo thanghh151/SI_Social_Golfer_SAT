@@ -10,6 +10,7 @@ from zipfile import BadZipFile
 from openpyxl.utils.dataframe import dataframe_to_rows
 import time
 import math
+from datetime import datetime
 
 num_weeks: int  # number of weeks
 players_per_group: int  # players per group
@@ -408,7 +409,8 @@ def solve_sat_problem():
 
     # Write the results to an Excel file
     df = pd.DataFrame(excel_results)
-    excel_file_path = f"out/results.xlsx"
+    current_date = datetime.now().strftime('%Y-%m-%d')
+    excel_file_path = f"out/results_{current_date}.xlsx"
         
     # Check if the file already exists
     if os.path.exists(excel_file_path):
