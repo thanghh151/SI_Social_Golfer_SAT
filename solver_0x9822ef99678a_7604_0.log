@@ -9,36 +9,36 @@ ACE v2.1
   Loading constraints...
 
   domains
-    types:1  values:875  sizes:[5:175]
+    types:1  values:720  sizes:[3:240]
   variables
-    count:175  arrays:1  degrees:[139:4,140:72,141:99]
+    count:240  arrays:1  degrees:[206:4,207:68,208:168]
   constraints
-    count:5993  specific:43  groups:2  arities:[4:5950,10:34,35:5,70:4]
-    distribution:[Cardinality:5,ConstraintIntension:5950,LexicographicLE:38]
-    intStructures:(1,shared:5949)
-    wck:2.22  cpu:2.531  mem:106M724
+    count:12224  specific:44  groups:2  arities:[4:12180,16:29,30:8,60:7]
+    distribution:[Cardinality:8,ConstraintIntension:12180,LexicographicLE:36]
+    intStructures:(1,shared:12179)
+    wck:3.08  cpu:3.625  mem:114M238
 
   Building solver... 
 
   solver
     guaranteedAC:true
-    wck:2.30  cpu:2.593  mem:33M343
+    wck:3.17  cpu:3.703  mem:133M112
 
   preprocessing
-    revisions:(23800,useless=23800)  values:875  unsat:false
-    wck:0.046  cpu:2.64  mem:33M343
+    revisions:(48720,useless=48720)  values:720  unsat:false
+    wck:0.067  cpu:3.765  mem:133M112
 
-    run0  dpts:0..31  effs:640  fails:7  wrgs:39  wck:0.00
+    run0  dpts:0..21  effs:391  fails:2  wrgs:24  wck:0.00
 
   global
-    effs:640  revisions:(265541,useless=265466)
-    stop:FULL_EXPLORATION  wrgs:39
-    wck:2.52  cpu:2.796  mem:33M867
+    effs:391  revisions:(269633,useless=269589)
+    stop:FULL_EXPLORATION  wrgs:24
+    wck:3.35  cpu:3.859  mem:133M112
 
 s UNSATISFIABLE
 
-d WRONG DECISIONS 39
+d WRONG DECISIONS 24
 d FOUND SOLUTIONS 0
 d COMPLETE EXPLORATION
 
-c real time : 2.796
+c real time : 3.875

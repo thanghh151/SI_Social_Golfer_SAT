@@ -364,51 +364,59 @@ def solve_sat_problem():
     
     id_counter += 1
 
-    
-    solution = sat_solver.get_model()
-    if solution is None:
+    if sat_status is False:
         end_time = time.time()
         elapsed_time = end_time - start_time
-        if elapsed_time > 10:
-            print("Timeout exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
-            result_dict["Result"] = "timeout"
-        else:
-            print("Not found. Time exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
-            result_dict["Result"] = "unsat"
+        print("Not found. Time exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
+        result_dict["Result"] = "unsat"
         result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
         result_dict["Variables"] = sat_solver.nof_vars()
         result_dict["Clauses"] = sat_solver.nof_clauses()
     else:
-        print(
-            "A solution was found in time " + '{0:.3f}s'.format(sat_solver.time()) + ". Generating it now.\n")
-        result_dict["Result"] = "sat"
+        solution = sat_solver.get_model()
+        if solution is None:
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            if elapsed_time > 10:
+                print("Timeout exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
+                result_dict["Result"] = "timeout"
+            else:
+                print("Not found. Time exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
+                result_dict["Result"] = "unsat"
+            result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
+            result_dict["Variables"] = sat_solver.nof_vars()
+            result_dict["Clauses"] = sat_solver.nof_clauses()
+        else:
+            print(
+                "A solution was found in time " + '{0:.3f}s'.format(sat_solver.time()) + ". Generating it now.\n")
+            result_dict["Result"] = "sat"
 
-        results = []
-        for v in solution:
-            if v > 0:
-                ijkl = resolve_variable(v)
-                if len(ijkl) == 3:
-                    golfer, group, week = ijkl
-                    results.append({"golfer": golfer, "group": group, "week": week})
+            results = []
+            for v in solution:
+                if v > 0:
+                    ijkl = resolve_variable(v)
+                    if len(ijkl) == 3:
+                        golfer, group, week = ijkl
+                        results.append({"golfer": golfer, "group": group, "week": week})
 
-        final_result = process_results(results)
-        show_results(final_result)
+            final_result = process_results(results)
+            show_results(final_result)
 
-        if show_additional_info:
-            sat_accum_stats = sat_solver.accum_stats()
-            print("Restarts: " +
-                    str(sat_accum_stats['restarts']) +
-                    ", conflicts: " +
-                    ", decisions: " +
-                    str(sat_accum_stats['decisions']) +
-                    ", propagations: " +
-                    str(sat_accum_stats["propagations"]))
+            if show_additional_info:
+                sat_accum_stats = sat_solver.accum_stats()
+                print("Restarts: " +
+                        str(sat_accum_stats['restarts']) +
+                        ", conflicts: " +
+                        ", decisions: " +
+                        str(sat_accum_stats['decisions']) +
+                        ", propagations: " +
+                        str(sat_accum_stats["propagations"]))
 
-        result_dict["Time"] = '{0:.3f}'.format(sat_solver.time())
-        result_dict["Variables"] = sat_solver.nof_vars()
-        result_dict["Clauses"] = sat_solver.nof_clauses()
+            result_dict["Time"] = '{0:.3f}'.format(sat_solver.time())
+            result_dict["Variables"] = sat_solver.nof_vars()
+            result_dict["Clauses"] = sat_solver.nof_clauses()
 
-        sat_solver.delete()
+            sat_solver.delete()
 
     # Append the result to a list
     excel_results = []
