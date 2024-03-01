@@ -390,13 +390,14 @@ def solve_sat_problem():
         if solution is None:
             end_time = time.time()
             elapsed_time = end_time - start_time
-            if elapsed_time > 10:
+            if elapsed_time > time_budget:
                 print("Timeout exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
                 result_dict["Result"] = "timeout"
+                result_dict["Time"] = "timeout"
             else:
                 print("Not found. Time exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
                 result_dict["Result"] = "unsat"
-            result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
+                result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
             result_dict["Variables"] = sat_solver.nof_vars()
             result_dict["Clauses"] = sat_solver.nof_clauses()
         else:

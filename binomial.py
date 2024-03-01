@@ -366,7 +366,7 @@ def solve_sat_problem():
         if solution is None:
             end_time = time.time()
             elapsed_time = end_time - start_time
-            if elapsed_time > 10:
+            if elapsed_time > time_budget:
                 print("Timeout exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
                 result_dict["Result"] = "timeout"
                 result_dict["Time"] = "timeout"
