@@ -122,7 +122,7 @@ if __name__ == "__main__":
         # If thread is still active
         if p.is_alive():
             result_dict["Result"] = "timeout"
-            result_dict["Time"] = "10.000"
+            result_dict["Time"] = "timeout"
             result_dict["Clauses"] = clauses.value
             write_results_to_excel(result_dict)
             print("solve() function took too long to complete... let's kill it...")

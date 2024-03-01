@@ -15,7 +15,7 @@ num_weeks: int  # number of weeks
 players_per_group: int  # players per group
 num_groups: int  # number of groups
 num_players: int  # players per group * number of groups
-time_budget = 10
+time_budget = 600
 show_additional_info = True
 show_additional_info_str = "Yes"
 
@@ -369,10 +369,11 @@ def solve_sat_problem():
             if elapsed_time > 10:
                 print("Timeout exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
                 result_dict["Result"] = "timeout"
+                result_dict["Time"] = "timeout"
             else:
                 print("Not found. Time exceeded (" + '{0:.3f}s'.format(elapsed_time) + ").\n")
                 result_dict["Result"] = "unsat"
-            result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
+                result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
             result_dict["Variables"] = sat_solver.nof_vars()
             result_dict["Clauses"] = sat_solver.nof_clauses()
         else:
