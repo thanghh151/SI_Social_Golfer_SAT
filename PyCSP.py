@@ -116,8 +116,8 @@ if __name__ == "__main__":
         p = multiprocessing.Process(target=solve_social_golfers, args=(data, result_dict, clauses,))
         p.start()
 
-        # Wait for 10 seconds or until process finishes
-        p.join(10)
+        # Wait for 600 seconds or until process finishes
+        p.join(600)
 
         # If thread is still active
         if p.is_alive():
