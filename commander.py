@@ -56,7 +56,7 @@ def ensure_golfer_plays_at_least_once_per_week():
             
 def get_commander_variable(golfer, week, group, position):
     total_num_vars = get_variable(num_players, players_per_group, num_groups, num_weeks) + get_variable2(num_players, num_groups, num_weeks)
-    return total_num_vars + + (golfer - 1) + (num_players * (position - 1)) + (num_players * players_per_group * (group - 1)) + (num_players * players_per_group * num_groups * (week - 1)) + 1
+    return total_num_vars + (golfer - 1) + (num_players * (position - 1)) + (num_players * players_per_group * (group - 1)) + (num_players * players_per_group * num_groups * (week - 1)) + 1
               
 # (AMO) Each golfer plays at most once in each group each week
 def assign_golfers_to_groups():
