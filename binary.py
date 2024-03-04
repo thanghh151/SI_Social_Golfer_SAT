@@ -69,11 +69,14 @@ def assign_golfers_to_groups():
     for golfer in range(1, num_players + 1):
         for week in range(1, num_weeks + 1):
             for position in range(1, players_per_group + 1):
-                position_binary = [int(x) for x in bin(position)[2:].zfill(k)]
+                # k = max(k, position.bit_length())
+                position_binary = [int(x) for x in bin(position)[2:].zfill(k)][::-1]
+                print(position_binary)
                 for group in range(1, num_groups + 1):
                     Y = [0] * k # new variables Y1, Y2, ..., Yk
                     for j in range(k):
                         X = get_variable(golfer, position, group, week) # variable ¬Xi
+                        # print(position_binary[j])
                         if position_binary[j] == 0:
                             Y[j] = -1 * get_y_variable(golfer, position, group, week, j) # assign ¬Yj to Xi if j-th digit is 0
                         else:
