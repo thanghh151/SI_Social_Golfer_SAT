@@ -26,13 +26,13 @@ id_counter = 1
 
 def generate_all_clauses():
     ensure_golfer_plays_at_least_once_per_week()
-    # assign_golfers_to_groups()
+    assign_golfers_to_groups()
     ensure_golfer_plays_in_one_group_per_week()
     ensure_unique_player_in_group_per_week()
     ensure_unique_position_for_player_in_group()
     ensure_player_in_group_if_assigned_to_week()
     ensure_no_repeated_players_in_groups()
-    # generate_symmetry_breaking_clause1()
+    generate_symmetry_breaking_clause1()
     generate_symmetry_breaking_clause2()
     generate_symmetry_breaking_clause3()
 
@@ -45,28 +45,29 @@ def ensure_golfer_plays_at_least_once_per_week():
     for player in range(1, num_players + 1):
         for week in range(1, num_weeks + 1):
             clause = []
-            for group in range(1, num_groups + 1):
-                clause.append(get_variable2(player, group, week))
-            print(clause)
+            for position in range(1, players_per_group + 1):
+                for group in range(1, num_groups + 1):
+                    clause.append(get_variable(player, position, group, week))
+            # print(clause)
             sat_solver.add_clause(clause)
             all_clauses.append(clause)
 
 
-# # (AMO) Each golfer plays at most once in each group each week
-# # x_w_p_g_p (2)
-# def assign_golfers_to_groups():
-#     """
-#     Assigns golfers to groups for each week and position using SAT solver.
-#     """
-#     for golfer in range(1, num_players + 1):
-#         for week in range(1, num_weeks + 1):
-#             for position in range(1, players_per_group + 1):
-#                 for group in range(1, num_groups + 1):
-#                     for other_position in range(position + 1, players_per_group + 1):
-#                         clause = [-1 * get_variable(golfer, position, group, week),
-#                                     -1 * get_variable(golfer, other_position, group, week)]
-#                         sat_solver.add_clause(clause)
-#                         all_clauses.append(clause)
+# (AMO) Each golfer plays at most once in each group each week
+# x_w_p_g_p (2)
+def assign_golfers_to_groups():
+    """
+    Assigns golfers to groups for each week and position using SAT solver.
+    """
+    for golfer in range(1, num_players + 1):
+        for week in range(1, num_weeks + 1):
+            for position in range(1, players_per_group + 1):
+                for group in range(1, num_groups + 1):
+                    for other_position in range(position + 1, players_per_group + 1):
+                        clause = [-1 * get_variable(golfer, position, group, week),
+                                    -1 * get_variable(golfer, other_position, group, week)]
+                        sat_solver.add_clause(clause)
+                        all_clauses.append(clause)
 
 
 # AMO_No golfer plays in more than one group in any week
@@ -75,7 +76,7 @@ def ensure_golfer_plays_in_one_group_per_week():
     """
     Ensures that each golfer plays in only one group per week.
 
-    This function iterates over all players, weeks, groups, and next groups,
+    This function iterates over all players, weeks, positions, groups, and next groups,
     and adds a clause to the SAT solver to enforce that a player cannot be in two different groups in the same week.
 
     Parameters:
@@ -86,16 +87,17 @@ def ensure_golfer_plays_in_one_group_per_week():
     """
     for player in range(1, num_players + 1):
         for week in range(1, num_weeks + 1):
-            for group in range(1, num_groups + 1):
-                for next_group in range(group + 1, num_groups + 1):
-                    clause = [-1 * get_variable2(player, group, week),
-                              -1 * get_variable2(player, next_group, week)]
-                    sat_solver.add_clause(clause)
-                    all_clauses.append(clause)
+            for position in range(1, players_per_group + 1):
+                for group in range(1, num_groups + 1):
+                    for next_group in range(group + 1, num_groups + 1):
+                        for next_position in range(1, players_per_group + 1):
+                            clause = [-1 * get_variable(player, position, group, week),
+                                      -1 * get_variable(player, next_position, next_group, week)]
+                            sat_solver.add_clause(clause)
+                            all_clauses.append(clause)
 
 # (ALO) ensure each player appears only once in a group in a week
-# w_g_p_x (4)    
-#ALp               
+# w_g_p_x (4)                   
 def ensure_unique_player_in_group_per_week():
     """
     Ensures that each player appears in only one group per week.
@@ -120,7 +122,6 @@ def ensure_unique_player_in_group_per_week():
 
 # (AMO) ensure no two players occupy the same position in the same group in the same week
 # w_g_p_x_p (5)
-#AMp
 def ensure_unique_position_for_player_in_group():
     """
     Ensures that each player has a unique position within their group for each week.
@@ -174,17 +175,17 @@ def ensure_no_repeated_players_in_groups():
                             sat_solver.add_clause(clause)
                             all_clauses.append(clause)
 
-# #(AMO) ensure no two players occupy the same position in the same group in the same week (x_p_g_w_x)
-# def generate_symmetry_breaking_clause1():
-#     for golfer1 in range(1, num_players + 1):
-#         for position1 in range(1, players_per_group):
-#             for group in range(1, num_groups + 1):
-#                 for week in range(1, num_weeks + 1):
-#                     for golfer2 in range(1, golfer1 + 1):
-#                         clause = [-1 * get_variable(golfer1, position1, group, week),
-#                                   -1 * get_variable(golfer2, position1 + 1, group, week)]
-#                         sat_solver.add_clause(clause)
-#                         all_clauses.append(clause)
+#(AMO) ensure no two players occupy the same position in the same group in the same week (x_p_g_w_x)
+def generate_symmetry_breaking_clause1():
+    for golfer1 in range(1, num_players + 1):
+        for position1 in range(1, players_per_group):
+            for group in range(1, num_groups + 1):
+                for week in range(1, num_weeks + 1):
+                    for golfer2 in range(1, golfer1 + 1):
+                        clause = [-1 * get_variable(golfer1, position1, group, week),
+                                  -1 * get_variable(golfer2, position1 + 1, group, week)]
+                        sat_solver.add_clause(clause)
+                        all_clauses.append(clause)
 
 # (AMO) A player cannot be in the first position of a group in a week if they are in the first position of the next group in the same week
 # x_g_w_x                        
@@ -359,7 +360,7 @@ def solve_sat_problem():
     # Clear the all_clauses list
     all_clauses.clear()
 
-    print("\nGenerating a problem.")
+    print(f"\nGenerating problem {num_weeks}-{players_per_group}-{num_groups}.")
 
     sat_solver = Glucose3(use_timer=True)
     generate_all_clauses()
