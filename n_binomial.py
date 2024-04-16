@@ -25,13 +25,27 @@ sat_solver: Solver
 all_clauses = []
 id_counter = 1
 
+def get_combinations(l, k):
+    if k > len(l):
+        return []
+    if k == 0:
+        return [[]]
+    if k == len(l):
+        return [l]
+    result = []
+    for i in range(len(l)):
+        rest = l[i+1:]
+        for c in get_combinations(rest, k-1):
+            result.append([l[i]] + c)
+    return result
+
 def generate_all_clauses():
     ensure_golfer_plays_at_least_once_per_week()
     # assign_golfers_to_groups()
     ensure_golfer_plays_in_one_group_per_week()
     ensure_unique_player_in_group_per_week()
     ensure_unique_position_for_player_in_group()
-    ensure_player_in_group_if_assigned_to_week()
+    # ensure_player_in_group_if_assigned_to_week()
     ensure_no_repeated_players_in_groups()
     # generate_symmetry_breaking_clause1()
     generate_symmetry_breaking_clause2()
@@ -94,7 +108,7 @@ def ensure_golfer_plays_in_one_group_per_week():
                     sat_solver.add_clause(clause)
                     all_clauses.append(clause)
 
-# (ALO) ensure each player appears only once in a group in a week
+# (ALO) Each week, each group has at least p golfer
 # w_g_p_x (4)    
 #ALp               
 def ensure_unique_player_in_group_per_week():
@@ -110,13 +124,19 @@ def ensure_unique_player_in_group_per_week():
     Returns:
         None
     """
-    for week in range(1, num_weeks + 1):
-        for group in range(1, num_groups + 1):
-            golfer_combinations = list(combinations(range(1, num_players + 1), players_per_group))
-            for golfer_combination in golfer_combinations:
-                clause = [get_variable2(golfer, group, week) for golfer in golfer_combination]
-                sat_solver.add_clause(clause)
-                all_clauses.append(clause)
+    # for week in range(1, num_weeks + 1):
+    #     for group in range(1, num_groups + 1):
+    #         golfer_combinations = list(combinations(range(1, num_players + 1), players_per_group))
+    #         for golfer_combination in golfer_combinations:
+    #             combination_variable = get_variable3(golfer_combination, group, week)
+    #             clause = [-combination_variable] + [get_variable2(golfer, group, week) for golfer in golfer_combination]
+    #             sat_solver.add_clause(clause)
+    #             all_clauses.append(clause)
+    #         for golfer in range(1, num_players + 1):
+    #             clause = [get_variable2(golfer, group, week) for golfer_combination in golfer_combinations if golfer in golfer_combination]
+    #             clause.append(-get_variable3(golfer_combination, group, week))
+    #             sat_solver.add_clause(clause)
+    #             all_clauses.append(clause)
     # for week in range(1, num_weeks + 1):
     #     for group in range(1, num_groups + 1):
     #         for position in range(1, players_per_group + 1):
@@ -125,34 +145,53 @@ def ensure_unique_player_in_group_per_week():
     #                 clause.append(get_variable(golfer, position, group, week))
     #             sat_solver.add_clause(clause)
     #             all_clauses.append(clause)
-                
-
-# (AMO) ensure no two players occupy the same position in the same group in the same week
+    for week in range(1, num_weeks + 1):
+        for group in range(1, num_groups + 1):
+            list = []
+            for golfer in range(1, num_players + 1):
+                list.append(get_variable2(golfer, group, week))
+            clause = get_combinations(list, num_players - players_per_group + 1)
+            for c in clause:
+                sat_solver.add_clause(c)
+                all_clauses.append(c)
+            
+# (AMO) Each week, each group has at most p golfer
 # w_g_p_x_p (5)
 #AMp
 def ensure_unique_position_for_player_in_group():
     """
     Ensures that each player has a unique position within their group for each week.
     """
+    # for week in range(1, num_weeks + 1):
+    #     for group in range(1, num_groups + 1):
+    #         for position in range(1, players_per_group + 1):
+    #             for golfer in range(1, num_players + 1):
+    #                 for other_golfer in range(golfer + 1, num_players + 1):
+    #                     clause = [-1 * get_variable(golfer, position, group, week),
+    #                               -1 * get_variable(other_golfer, position, group, week)]
+    #                     sat_solver.add_clause(clause)
+    #                     all_clauses.append(clause)
     for week in range(1, num_weeks + 1):
         for group in range(1, num_groups + 1):
-            for position in range(1, players_per_group + 1):
-                for golfer in range(1, num_players + 1):
-                    for other_golfer in range(golfer + 1, num_players + 1):
-                        clause = [-1 * get_variable(golfer, position, group, week),
-                                  -1 * get_variable(other_golfer, position, group, week)]
-                        sat_solver.add_clause(clause)
-                        all_clauses.append(clause)
+            list = []
+            for golfer in range(1, num_players + 1):
+                list.append(-1 * get_variable2(golfer, group, week))
+            clause = get_combinations(list, players_per_group + 1)
+            for c in clause:
+                sat_solver.add_clause(c)
+                all_clauses.append(c)
     # for week in range(1, num_weeks + 1):
     #     for group in range(1, num_groups + 1):
     #         golfer_combinations = list(combinations(range(1, num_players + 1), players_per_group))
-    #         for i in range(len(golfer_combinations)):
-    #             for j in range(i + 1, len(golfer_combinations)):
-    #                 golfer_combination = golfer_combinations[i]
-    #                 other_golfer_combination = golfer_combinations[j]
-    #                 clause = [-1 * get_variable2(golfer, group, week) for golfer in golfer_combination] + [get_variable2(golfer, group, week) for golfer in other_golfer_combination]
-    #                 sat_solver.add_clause(clause)
-    #                 all_clauses.append(clause)
+    #         for golfer_combination in golfer_combinations:
+    #             combination_variable = get_variable3(golfer_combination, group, week)
+    #             for golfer in golfer_combination:
+    #                 for other_golfer in [g for g in golfer_combination if g != golfer]:
+    #                     clause = [-1 * get_variable2(golfer, group, week),
+    #                             -1 * get_variable2(other_golfer, group, week),
+    #                             -1 * combination_variable]
+    #                     sat_solver.add_clause(clause)
+    #                     all_clauses.append(clause)
 
                     
 # This is a clause combining two sets of variables, ijkl and ikl (x_g_w_p) _6_
@@ -241,6 +280,17 @@ def get_variable2(golfer, group, week):
     group -= 1
     week -= 1
     return golfer + (num_players * group) + (week * num_players * num_groups) + 1 + (num_players * players_per_group * num_groups * num_weeks)
+
+# def get_variable3(golfer_combination, group, week):
+#     """
+#     This function generates a unique variable for a given golfer combination, group, and week.
+#     The variable is an integer that is calculated based on the golfer IDs, group number, and week number.
+#     """
+#     golfer_sum = sum(golfer_combination)
+#     golfer_sum -= len(golfer_combination)
+#     group -= 1
+#     week -= 1
+#     return golfer_sum + (num_players * group) + (week * num_players * num_groups) + 1 + (num_players * players_per_group * num_groups * num_weeks)
 
 def resolve_variable(v):
     for golfer in range(1, num_players + 1):
