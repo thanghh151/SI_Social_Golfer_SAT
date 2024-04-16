@@ -16,7 +16,7 @@ num_weeks: int  # number of weeks
 players_per_group: int  # players per group
 num_groups: int  # number of groups
 num_players: int  # players per group * number of groups
-time_budget = 600
+time_budget = 600  # time limit for solving the problem in seconds
 show_additional_info = True
 show_additional_info_str = "Yes"
 
@@ -42,8 +42,8 @@ def get_combinations(l, k):
 def generate_all_clauses():
     ensure_golfer_plays_at_least_once_per_week()
     ensure_golfer_plays_in_one_group_per_week()
-    ensure_unique_player_in_group_per_week()
-    ensure_unique_position_for_player_in_group()
+    ensure_each_group_has_at_least_p_players()
+    ensure_each_group_has_at_most_p_players()
     ensure_no_repeated_players_in_groups()
 
 # (ALO) Every golfer plays at least once a week
@@ -60,6 +60,7 @@ def ensure_golfer_plays_at_least_once_per_week():
             # print(clause)
             sat_solver.add_clause(clause)
             all_clauses.append(clause)
+    print("Finished ensure_golfer_plays_at_least_once_per_week")
 
 # AMO_No golfer plays in more than one group in any week
 # x_w_p_g_g_p (3)                          
@@ -84,11 +85,12 @@ def ensure_golfer_plays_in_one_group_per_week():
                               -1 * get_variable(player, next_group, week)]
                     sat_solver.add_clause(clause)
                     all_clauses.append(clause)
+    print("Finished ensure_golfer_plays_in_one_group_per_week")
 
 # (ALO) Each week, each group has at least p golfer
 # w_g_p_x (4)    
-#ALp               
-def ensure_unique_player_in_group_per_week():
+# (ALp)               
+def ensure_each_group_has_at_least_p_players():
     """
     Ensures that each player appears in only one group per week.
 
@@ -110,11 +112,12 @@ def ensure_unique_player_in_group_per_week():
             for c in clause:
                 sat_solver.add_clause(c)
                 all_clauses.append(c)
+    print("Finished ensure_each_group_has_at_least_p_players")
             
 # (AMO) Each week, each group has at most p golfer
 # w_g_p_x_p (5)
-#AMp
-def ensure_unique_position_for_player_in_group():
+# (AMp)
+def ensure_each_group_has_at_most_p_players():
     """
     Ensures that each player has a unique position within their group for each week.
     """
@@ -127,6 +130,7 @@ def ensure_unique_position_for_player_in_group():
             for c in clause:
                 sat_solver.add_clause(c)
                 all_clauses.append(c)
+    print("Finished ensure_each_group_has_at_most_p_players")
                 
                                     
 # If two players m and n play in the same group k in week l, they cannot play together in any group together in future weeks
@@ -147,6 +151,7 @@ def ensure_no_repeated_players_in_groups():
                                       -1 * get_variable(golfer2, other_group, other_week)]
                             sat_solver.add_clause(clause)
                             all_clauses.append(clause)
+    print("Finished ensure_no_repeated_players_in_groups")
 
 
 # returns a unique identifier for the variable that represents the assignment of the golfer to the group in the week
@@ -305,9 +310,9 @@ def solve_sat_problem():
             results = []
             for v in solution:
                 if v > 0:
-                    ijkl = resolve_variable(v)
-                    if len(ijkl) == 3:
-                        golfer, group, week = ijkl
+                    ikl = resolve_variable(v)
+                    if len(ikl) == 3:
+                        golfer, group, week = ikl
                         results.append({"golfer": golfer, "group": group, "week": week})
 
             final_result = process_results(results)
