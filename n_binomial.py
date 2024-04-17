@@ -45,6 +45,10 @@ def generate_all_clauses():
     ensure_each_group_has_at_least_p_players()
     ensure_each_group_has_at_most_p_players()
     ensure_no_repeated_players_in_groups()
+    # generate_symmetry_breaking_clause1()
+    # generate_symmetry_breaking_clause2()
+    generate_symmetry_breaking_clause3()
+    generate_symmetry_breaking_clause4()
 
 # (ALO) Every golfer plays at least once a week
 # x_w_p_g (1)
@@ -152,14 +156,58 @@ def ensure_no_repeated_players_in_groups():
                             sat_solver.add_clause(clause)
                             all_clauses.append(clause)
     print("Finished ensure_no_repeated_players_in_groups")
-
+    
+# Ensure that the groups in the previous week have a dictionary order that is less than (or equal to) the groups in the following week    
+def generate_symmetry_breaking_clause1():
+    for golfer in range(1, num_players + 1):
+        for group in range(1, num_groups + 1): 
+            for week in range(1, num_weeks): 
+                clause1 = [-1 * get_variable(golfer, group, week),
+                        get_variable(golfer, group + 1, week)]
+                clause2 = [-1 * get_variable(golfer, group, week),
+                        get_variable(golfer, group, week + 1)]
+                sat_solver.add_clause(clause1)
+                sat_solver.add_clause(clause2)
+                all_clauses.append(clause1)
+                all_clauses.append(clause2)
+    
+# In order for the player to take the lowest possible position on their bucket list, we have a tie
+def generate_symmetry_breaking_clause2():
+    for group in range(1, num_groups + 1):
+        for week in range(1, num_weeks + 1):
+            for golfer in range(2, num_players + 1):
+                clause = [-1 * get_variable(golfer, group, week),
+                          get_variable(golfer - 1, group, week)]
+                sat_solver.add_clause(clause)
+                all_clauses.append(clause)
+                
+        
+# Ensure that group (k) cannot appear before every group from (1) to (k − 1) has been used. This can be expressed through constraints:                  
+def generate_symmetry_breaking_clause3():
+    group1 = 1 
+    for golfer in range(1, num_players + 1):
+        for week in range(1, num_weeks + 1):
+            for group2 in range(2, num_groups + 1):  # group2 starts from 2
+                clause = [-1 * get_variable(golfer, group1, week),
+                          -1 * get_variable(golfer, group2, week)]
+                sat_solver.add_clause(clause)
+                all_clauses.append(clause)
+                
+# Require a certain group (e.g. the first group) to include players with the lowest stats:
+def generate_symmetry_breaking_clause4():
+    golfer = 1 
+    group = 1
+    for week in range(1, num_weeks + 1):
+        clause = [get_variable(golfer, group, week)]
+        sat_solver.add_clause(clause)
+        all_clauses.append(clause)
 
 # returns a unique identifier for the variable that represents the assignment of the golfer to the group in the week
 def get_variable(golfer, group, week):
     golfer -= 1
     group -= 1
     week -= 1
-    return golfer + (num_players * group) + (week * num_players * num_groups) + 1 + (num_players * players_per_group * num_groups * num_weeks)
+    return golfer + (num_players * group) + (week * num_players * num_groups) + 1 + (num_players * num_groups * num_weeks)
 
 
 def resolve_variable(v):
@@ -247,6 +295,9 @@ def solve_sat_problem():
     print(f"\nGenerating problem {num_weeks}-{players_per_group}-{num_groups}.")
 
     sat_solver = Glucose3(use_timer=True)
+    start_time = time.time()
+    timer = Timer(time_budget, interrupt, [sat_solver])
+    timer.start()
     generate_all_clauses()
     
     # Store the number of variables and clauses before solving the problem
@@ -259,10 +310,6 @@ def solve_sat_problem():
 
     print("\nSearching for a solution.")
 
-    timer = Timer(time_budget, interrupt, [sat_solver])
-    timer.start()
-
-    start_time = time.time()
     sat_status = sat_solver.solve_limited(expect_interrupt=True)
     
     global id_counter
@@ -270,7 +317,7 @@ def solve_sat_problem():
     result_dict = {
         "ID": id_counter,
         "Problem": f"{num_weeks}-{players_per_group}-{num_groups}",
-        "Type": "binomial",
+        "Type": "new_binomial",
         "Time": "",
         "Result": "",
         "Variables": 0,
