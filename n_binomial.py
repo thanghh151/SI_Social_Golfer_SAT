@@ -207,7 +207,7 @@ def get_variable(golfer, group, week):
     golfer -= 1
     group -= 1
     week -= 1
-    return golfer + (num_players * group) + (week * num_players * num_groups) + 1 + (num_players * num_groups * num_weeks)
+    return golfer + (num_players * group) + (week * num_players * num_groups) + 1
 
 
 def resolve_variable(v):
@@ -292,7 +292,7 @@ def solve_sat_problem():
     # Clear the all_clauses list
     all_clauses.clear()
 
-    print(f"\nGenerating problem {num_weeks}-{players_per_group}-{num_groups}.")
+    print(f"\nGenerating problem {num_groups}-{players_per_group}-{num_weeks}.")
 
     sat_solver = Glucose3(use_timer=True)
     start_time = time.time()
@@ -316,7 +316,7 @@ def solve_sat_problem():
 
     result_dict = {
         "ID": id_counter,
-        "Problem": f"{num_weeks}-{players_per_group}-{num_groups}",
+        "Problem": f"{num_groups}-{players_per_group}-{num_weeks}",
         "Type": "new_binomial",
         "Time": "",
         "Result": "",
@@ -419,7 +419,7 @@ def solve_sat_problem():
     #     os.makedirs(directory_path)
 
     # # Create the full path to the file "{problem}.cnf" in the directory "input_v1"
-    # problem_name = f"{num_weeks}-{players_per_group}-{num_groups}"
+    # problem_name = f"{num_groups}-{players_per_group}-{num_weeks}"
     # file_name = problem_name + ".cnf"
     # file_path = os.path.join(directory_path, file_name)
 
@@ -442,10 +442,10 @@ def solve_sat_problem():
 # solve the problem
 
 def run_from_input_file():
-    global num_weeks, players_per_group, num_groups
+    global num_groups, players_per_group, num_weeks
     with open("data.txt") as f:
         for line in f:
-            num_weeks, players_per_group, num_groups = map(int, line.split())
+            num_groups, players_per_group, num_weeks = map(int, line.split())
             solve_sat_problem()
 
 if __name__ == "__main__":

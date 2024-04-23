@@ -15,7 +15,7 @@ num_weeks: int  # number of weeks
 players_per_group: int  # players per group
 num_groups: int  # number of groups
 num_players: int  # players per group * number of groups
-time_budget = 600
+time_budget = 10
 show_additional_info = True
 show_additional_info_str = "Yes"
 
@@ -360,9 +360,12 @@ def solve_sat_problem():
     # Clear the all_clauses list
     all_clauses.clear()
 
-    print(f"\nGenerating problem {num_weeks}-{players_per_group}-{num_groups}.")
+    print(f"\nGenerating problem {num_groups}-{players_per_group}-{num_weeks}.")
 
     sat_solver = Glucose3(use_timer=True)
+    start_time = time.time()
+    timer = Timer(time_budget, interrupt, [sat_solver])
+    timer.start()
     generate_all_clauses()
     
     # Store the number of variables and clauses before solving the problem
@@ -375,17 +378,13 @@ def solve_sat_problem():
 
     print("\nSearching for a solution.")
 
-    timer = Timer(time_budget, interrupt, [sat_solver])
-    timer.start()
-
-    start_time = time.time()
     sat_status = sat_solver.solve_limited(expect_interrupt=True)
     
     global id_counter
 
     result_dict = {
         "ID": id_counter,
-        "Problem": f"{num_weeks}-{players_per_group}-{num_groups}",
+        "Problem": f"{num_groups}-{players_per_group}-{num_weeks}",
         "Type": "binomial",
         "Time": "",
         "Result": "",
@@ -426,9 +425,9 @@ def solve_sat_problem():
             results = []
             for v in solution:
                 if v > 0:
-                    ijkl = resolve_variable(v)
-                    if len(ijkl) == 3:
-                        golfer, group, week = ijkl
+                    ikl = resolve_variable(v)
+                    if len(ikl) == 3:
+                        golfer, group, week = ikl
                         results.append({"golfer": golfer, "group": group, "week": week})
 
             final_result = process_results(results)
@@ -488,7 +487,7 @@ def solve_sat_problem():
     #     os.makedirs(directory_path)
 
     # # Create the full path to the file "{problem}.cnf" in the directory "input_v1"
-    # problem_name = f"{num_weeks}-{players_per_group}-{num_groups}"
+    # problem_name = f"{num_groups}-{players_per_group}-{num_weeks}"
     # file_name = problem_name + ".cnf"
     # file_path = os.path.join(directory_path, file_name)
 
@@ -511,10 +510,10 @@ def solve_sat_problem():
 # solve the problem
 
 def run_from_input_file():
-    global num_weeks, players_per_group, num_groups
+    global num_groups, players_per_group, num_weeks
     with open("data.txt") as f:
         for line in f:
-            num_weeks, players_per_group, num_groups = map(int, line.split())
+            num_groups, players_per_group, num_weeks = map(int, line.split())
             solve_sat_problem()
 
 if __name__ == "__main__":
