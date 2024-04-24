@@ -45,10 +45,10 @@ def generate_all_clauses():
     ensure_each_group_has_at_least_p_players()
     ensure_each_group_has_at_most_p_players()
     ensure_no_repeated_players_in_groups()
-    # generate_symmetry_breaking_clause1()
-    # generate_symmetry_breaking_clause2()
-    generate_symmetry_breaking_clause3()
-    generate_symmetry_breaking_clause4()
+    generate_symmetry_breaking_clause1()
+    generate_symmetry_breaking_clause2()
+    # generate_symmetry_breaking_clause3()
+    # generate_symmetry_breaking_clause4()
 
 # (ALO) Every golfer plays at least once a week
 # x_w_p_g (1)
@@ -157,29 +157,22 @@ def ensure_no_repeated_players_in_groups():
                             all_clauses.append(clause)
     print("Finished ensure_no_repeated_players_in_groups")
     
-# Ensure that the groups in the previous week have a dictionary order that is less than (or equal to) the groups in the following week    
+# Ensure that the first p players are placed in the first group of the first week; 
+# p next player according to, in the second group of the first week; and so on.  
 def generate_symmetry_breaking_clause1():
     for golfer in range(1, num_players + 1):
-        for group in range(1, num_groups + 1): 
-            for week in range(1, num_weeks): 
-                clause1 = [-1 * get_variable(golfer, group, week),
-                        get_variable(golfer, group + 1, week)]
-                clause2 = [-1 * get_variable(golfer, group, week),
-                        get_variable(golfer, group, week + 1)]
-                sat_solver.add_clause(clause1)
-                sat_solver.add_clause(clause2)
-                all_clauses.append(clause1)
-                all_clauses.append(clause2)
+        group = (golfer - 1) // players_per_group + 1
+        clause = [get_variable(golfer, group, 1)]
+        sat_solver.add_clause(clause)
+        all_clauses.append(clause)
     
-# In order for the player to take the lowest possible position on their bucket list, we have a tie
+# Ensure that the first p players are distributed into different groups each week
 def generate_symmetry_breaking_clause2():
-    for group in range(1, num_groups + 1):
-        for week in range(1, num_weeks + 1):
-            for golfer in range(2, num_players + 1):
-                clause = [-1 * get_variable(golfer, group, week),
-                          get_variable(golfer - 1, group, week)]
-                sat_solver.add_clause(clause)
-                all_clauses.append(clause)
+    for week in range(2, num_weeks + 1):
+        for group in range(1, players_per_group + 1):
+            clause = [get_variable(group, group, week)]
+            sat_solver.add_clause(clause)
+            all_clauses.append(clause)
                 
         
 # Ensure that group (k) cannot appear before every group from (1) to (k − 1) has been used. This can be expressed through constraints:                  
