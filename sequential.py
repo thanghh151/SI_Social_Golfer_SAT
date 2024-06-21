@@ -484,7 +484,7 @@ def solve_sat_problem():
 
     result_dict = {
         "ID": id_counter,
-        "Problem": f"{num_weeks}-{players_per_group}-{num_groups}",
+        "Problem": f"{num_groups}-{players_per_group}-{num_weeks}",
         "Type": "sequential",
         "Time": "",
         "Result": "",
@@ -613,7 +613,7 @@ def run_from_input_file():
     global num_weeks, players_per_group, num_groups
     with open("data.txt") as f:
         for line in f:
-            num_weeks, players_per_group, num_groups = map(int, line.split())
+            num_groups, players_per_group, num_weeks = map(int, line.split())
             solve_sat_problem()
 
 if __name__ == "__main__":

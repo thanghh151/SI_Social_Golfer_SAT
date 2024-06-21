@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     # Solve for each set of data
     for data in data_list:
-        nWeeks, size, nGroups = data
+        nGroups, size, nWeeks, = data
         nPlayers = nGroups * size
         clauses = Value('i', 0)
         result_dict = {

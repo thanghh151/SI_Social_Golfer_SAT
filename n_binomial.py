@@ -26,18 +26,7 @@ all_clauses = []
 id_counter = 1
 
 def get_combinations(l, k):
-    if k > len(l):
-        return []
-    if k == 0:
-        return [[]]
-    if k == len(l):
-        return [l]
-    result = []
-    for i in range(len(l)):
-        rest = l[i+1:]
-        for c in get_combinations(rest, k-1):
-            result.append([l[i]] + c)
-    return result
+    return list(combinations(l, k))
 
 def generate_all_clauses():
     ensure_golfer_plays_at_least_once_per_week()
@@ -326,7 +315,7 @@ def solve_sat_problem():
         result_dict["Result"] = "unsat"
         result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
         result_dict["Variables"] = sat_solver.nof_vars()
-        result_dict["Clauses"] = sat_solver.nof_clauses()
+        result_dict["Clauses"] = num_clauses
     else:
         solution = sat_solver.get_model()
         if solution is None:
@@ -341,7 +330,7 @@ def solve_sat_problem():
                 result_dict["Result"] = "unsat"
                 result_dict["Time"] = '{0:.3f}'.format(elapsed_time)
             result_dict["Variables"] = sat_solver.nof_vars()
-            result_dict["Clauses"] = sat_solver.nof_clauses()
+            result_dict["Clauses"] = num_clauses
         else:
             print(
                 "A solution was found in time " + '{0:.3f}s'.format(sat_solver.time()) + ". Generating it now.\n")
@@ -370,7 +359,7 @@ def solve_sat_problem():
 
             result_dict["Time"] = '{0:.3f}'.format(sat_solver.time())
             result_dict["Variables"] = sat_solver.nof_vars()
-            result_dict["Clauses"] = sat_solver.nof_clauses()
+            result_dict["Clauses"] = num_clauses
 
             sat_solver.delete()
     # Append the result to a list
