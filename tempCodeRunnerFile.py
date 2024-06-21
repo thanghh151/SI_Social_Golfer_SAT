@@ -1,0 +1,1 @@
+are_in_same_group_in_week
