@@ -48,9 +48,7 @@ def generate_all_clauses():
     # not_enough_10()
     # symmetry_breaking_15()
     # symmetry_breaking_16()
-    sat_solver.solve()
-    model = precompute_model(sat_solver)
-    ensure_no_repeated_players_in_groups(model)
+    ensure_no_repeated_players_in_groups(sat_solver)
 
 def plus_clause(clause):
     sat_solver.add_clause(clause)
@@ -139,20 +137,14 @@ def ensure_group_contains_exactly_p_players():
             for player in range(1, num_players + 1):
                 list.append(get_variable(player, group, week))
             exactly_k(list, players_per_group)
-
-def precompute_model(sat_solver):
-    model = sat_solver.get_model()
-    if model is None:
-        raise ValueError("SAT solver did not find a solution.")
-    return set(model)  
-          
+       
 def are_in_same_group_in_week(i, j, l, model):
     for group in range(1, num_groups + 1):
         if get_variable(i, group, l) in model and get_variable(j, group, l) in model:
             return True
     return False
 
-def ensure_no_repeated_players_in_groups(model):
+def ensure_no_repeated_players_in_groups(sat_solver):
     M = [[[False for _ in range(num_players)] for _ in range(num_players)] for _ in range(num_weeks + 1)]
 
     # Initialize M0ij to False
@@ -161,23 +153,28 @@ def ensure_no_repeated_players_in_groups(model):
             M[0][i][j] = False
 
     for l in range(1, num_weeks + 1):
+        # Add clauses based on M
         for i in range(num_players):
             for j in range(i + 1, num_players):
-                # If M(l-1)ij is True, then Mlij is also True
-                if M[l - 1][i][j]:
-                    M[l][i][j] = True
-
                 for k in range(1, num_groups + 1):
-                    # If both players are in the same group, then Mlij is True
-                    if are_in_same_group_in_week(i + 1, j + 1, l, model):
-                        M[l][i][j] = True
-
-                    # If M(l-1)ij is True, then neither player can be in group k in week l
                     if M[l - 1][i][j]:
                         plus_clause([-1 * get_variable(i + 1, k, l), -1 * get_variable(j + 1, k, l)])
-
-                # If M(l-1)ij is False and the players are not in the same group, then Mlij is False
-                if not M[l - 1][i][j] and not are_in_same_group_in_week(i + 1, j + 1, l, model):
+        
+        # Solve the SAT problem for the current week
+        sat_solver.solve()
+        model = sat_solver.get_model()  # Recompute the model for the current week
+        if model is None:
+            continue
+        # print(f'Week {l}: {model}\n')
+        
+        # Update the matrix M based on the new model
+        for i in range(num_players):
+            for j in range(i + 1, num_players):
+                if M[l - 1][i][j]:
+                    M[l][i][j] = True
+                elif are_in_same_group_in_week(i + 1, j + 1, l, model):
+                    M[l][i][j] = True
+                else:
                     M[l][i][j] = False
 
     # Print the matrix M
@@ -185,7 +182,6 @@ def ensure_no_repeated_players_in_groups(model):
         for row in matrix:
             print(row)
         print("\n")
-
 
 # SB1: The first week order is [1, 2, 3, ... x]
 def symmetry_breaking_1():
