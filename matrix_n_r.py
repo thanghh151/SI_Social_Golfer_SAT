@@ -145,28 +145,38 @@ def are_in_same_group_in_week(i, j, l, model):
     return False
 
 def ensure_no_repeated_players_in_groups(sat_solver):
+    # Initialize the 3D matrix M to track if a pair of players i, j have been in the same group up to week l
     M = [[[False for _ in range(num_players)] for _ in range(num_players)] for _ in range(num_weeks + 1)]
 
-    # Initialize M0ij to False
+    # Initialize M0ij to False as no players have been in the same group initially
     for i in range(num_players):
         for j in range(i + 1, num_players):
             M[0][i][j] = False
 
+    previous_model = None  # Store the model of the previous iteration
+
+    # Iterate through each week
     for l in range(1, num_weeks + 1):
-        # Add clauses based on M
+        # Add clauses to ensure no repeated players in the same group for the current week
         for i in range(num_players):
             for j in range(i + 1, num_players):
                 for k in range(1, num_groups + 1):
                     if M[l - 1][i][j]:
                         plus_clause([-1 * get_variable(i + 1, k, l), -1 * get_variable(j + 1, k, l)])
-        
+
         # Solve the SAT problem for the current week
-        sat_solver.solve()
+        if not sat_solver.solve():
+            print(f"No model found for week {l}")
+            M[l] = M[l - 1]
+
         model = sat_solver.get_model()  # Recompute the model for the current week
         if model is None:
-            continue
-        # print(f'Week {l}: {model}\n')
-        
+            print(f"No model found for week {l}")
+            M[l] = M[l - 1]
+            model = previous_model  # Use the model from the previous iteration if current model is None
+
+        previous_model = model  # Update the previous model with the current model
+
         # Update the matrix M based on the new model
         for i in range(num_players):
             for j in range(i + 1, num_players):
@@ -177,11 +187,18 @@ def ensure_no_repeated_players_in_groups(sat_solver):
                 else:
                     M[l][i][j] = False
 
-    # Print the matrix M
-    for matrix in M:
-        for row in matrix:
+        # Print intermediate matrix for each week
+        print(f"Week {l} matrix after solving:")
+        for row in M[l]:
             print(row)
         print("\n")
+
+    # Print the final matrix M for debugging purposes
+    # for week, matrix in enumerate(M):
+    #     print(f"Week {week}:")
+    #     for row in matrix:
+    #         print(row)
+    #     print("\n")
 
 # SB1: The first week order is [1, 2, 3, ... x]
 def symmetry_breaking_1():
