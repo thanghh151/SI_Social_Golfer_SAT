@@ -32,23 +32,6 @@ def generate_all_clauses():
     ensure_no_repeated_players_in_groups()
     symmetry_breaking_1()
     symmetry_breaking_2()
-    # symmetry_breaking_7()
-    # 7-7-8
-    # symmetry_breaking_8()
-    # symmetry_breaking_9()
-    # # 9-9-10
-    # symmetry_breaking_10()
-    # symmetry_breaking_11()
-    # symmetry_breaking_12()
-    # bonus_9_9_10()
-    # p-p-(p+1)
-    # symmetry_breaking_13_14()
-    # build_gs1()
-    # # 8-8-9
-    # not_enough_10()
-    # symmetry_breaking_15()
-    # symmetry_breaking_16()
-    # ensure_no_repeated_players_in_groups(sat_solver)
 
 def plus_clause(clause):
     sat_solver.add_clause(clause)
@@ -137,95 +120,39 @@ def ensure_group_contains_exactly_p_players():
             for player in range(1, num_players + 1):
                 list.append(get_variable(player, group, week))
             exactly_k(list, players_per_group)
-       
-# def are_in_same_group_in_week(i, j, l, model):
-#     for group in range(1, num_groups + 1):
-#         if get_variable(i, group, l) in model and get_variable(j, group, l) in model:
-#             return True
-#     return False
-
-# def ensure_no_repeated_players_in_groups(sat_solver):
-#     # Initialize the 3D matrix M to track if a pair of players i, j have been in the same group up to week l
-#     M = [[[False for _ in range(num_players)] for _ in range(num_players)] for _ in range(num_weeks + 1)]
-
-#     # Initialize M0ij to False as no players have been in the same group initially
-#     for i in range(num_players):
-#         for j in range(i + 1, num_players):
-#             M[0][i][j] = False
-
-#     previous_model = None  # Store the model of the previous iteration
-
-#     # Iterate through each week
-#     for l in range(1, num_weeks + 1):
-#         # Add clauses to ensure no repeated players in the same group for the current week
-#         for i in range(num_players):
-#             for j in range(i + 1, num_players):
-#                 for k in range(1, num_groups + 1):
-#                     if M[l - 1][i][j]:
-#                         plus_clause([-1 * get_variable(i + 1, k, l), -1 * get_variable(j + 1, k, l)])
-
-#         # Solve the SAT problem for the current week
-#         if not sat_solver.solve():
-#             print(f"No model found for week {l}")
-#             M[l] = M[l - 1]
-
-#         model = sat_solver.get_model()  # Recompute the model for the current week
-#         if model is None:
-#             print(f"No model found for week {l}")
-#             M[l] = M[l - 1]
-#             model = previous_model  # Use the model from the previous iteration if current model is None
-
-#         previous_model = model  # Update the previous model with the current model
-
-#         # Update the matrix M based on the new model
-#         for i in range(num_players):
-#             for j in range(i + 1, num_players):
-#                 if M[l - 1][i][j]:
-#                     M[l][i][j] = True
-#                 elif are_in_same_group_in_week(i + 1, j + 1, l, model):
-#                     M[l][i][j] = True
-#                 else:
-#                     M[l][i][j] = False
-
-#         # Print intermediate matrix for each week
-#         print(f"Week {l} matrix after solving:")
-#         for row in M[l]:
-#             print(row)
-#         print("\n")
-
-    # Print the final matrix M for debugging purposes
-    # for week, matrix in enumerate(M):
-    #     print(f"Week {week}:")
-    #     for row in matrix:
-    #         print(row)
-    #     print("\n")
-   
+                 
 def ensure_no_repeated_players_in_groups():
-    for l in range(num_weeks + 1):
-        for i in range(1, num_players + 1):
-            for j in range(i + 1, num_players + 1):
-                if l == 0:
-                    # (1) M0ij = False
-                    clause = [-get_variable_M(i, j, l)]
-                    plus_clause(clause)
-                else:
-                    for k in range(1, num_groups + 1):
-                        # (2) Gikl and Gjkl -> Mlij
-                        clause2 = [-get_variable(i, k, l), -get_variable(j, k, l), get_variable_M(i, j, l)]
-                        plus_clause(clause2)
-
-                        # (3) M(l-1)ij -> Mlij
-                        clause3 = [-get_variable_M(i, j, l-1), get_variable_M(i, j, l)]
-                        plus_clause(clause3)
-
-                        # (4) M(l-1)ij -> not (Gikl and Gjkl)
-                        clause4 = [-get_variable_M(i, j, l-1), -get_variable(i, k, l), -get_variable(j, k, l)]
-                        plus_clause(clause4)
-
-                        # (5) not M(l-1)ij and not (Gikl and Gjkl) -> not Mlij
-                        clause5 = [get_variable_M(i, j, l-1), get_variable(i, k, l), get_variable(j, k, l), -get_variable_M(i, j, l)]
-                        plus_clause(clause5)
-                        
+    for p1 in range(1, num_players):
+        for p2 in range(p1 + 1, num_players + 1):
+            M = [0 for _ in range(num_weeks)]
+            global id_variable
+            for l in range(0, num_weeks):
+                M[l] = id_variable + 1
+                id_variable += 1
+                
+            # (1) M0ij = False
+            plus_clause([-M[0]])
+            
+            # (2) Gikl and Gjkl -> Mlij
+            for k in range(1, num_groups + 1):
+                for l in range(1, num_weeks):
+                    plus_clause([-get_variable(p1, k, l), -get_variable(p2, k, l), M[l]])
+            
+            # (3) M(l-1)ij -> Mlij
+            for l in range(1, num_weeks):
+                plus_clause([-M[l - 1], M[l]])
+                
+            # (4) M(l-1)ij -> not (Gikl and Gjkl)
+            for k in range(1, num_groups + 1):
+                for l in range(1, num_weeks + 1):
+                    plus_clause([-M[l-1], -get_variable(p1, k, l), -get_variable(p2, k, l)])
+            
+            # (5) not M(l-1)ij and not (Gikl and Gjkl) -> not Mlij
+            for k in range(1, num_groups + 1):
+                for l in range(1, num_weeks):
+                    plus_clause([-M[l-1], -get_variable(p1, k, l), -get_variable(p2, k, l), -M[l]])
+                    
+                                               
 # SB1: The first week order is [1, 2, 3, ... x]
 def symmetry_breaking_1():
     for player in range(1, num_players + 1):
@@ -245,86 +172,6 @@ def symmetry_breaking_2():
                     plus_clause([get_variable(player, group, week)])
                 else:
                     plus_clause([-1 * get_variable(player, group, week)])
-
-# SB7
-def symmetry_breaking_7():
-    for week in range(2, num_weeks + 1):
-        for group in range(1, num_groups + 1):
-            for golfer1 in range(1, num_players + 1):
-                for golfer2 in range(golfer1 + 1, num_players + 1):
-                        if ((golfer1 - 1) // players_per_group == (golfer2 - 1) // players_per_group):
-                            clause = [-1 * get_variable(golfer1, group, week),
-                                      -1 * get_variable(golfer2, group, week)]
-                            plus_clause(clause)
-
-# SB8
-def symmetry_breaking_8():
-    for group in range(1, num_groups + 1):
-        for week in range(2, num_weeks + 1):
-            for other_week in range(week + 1, num_weeks + 1):
-                for player in range(players_per_group + 1, num_players + 1):
-                    plus_clause([-1 * get_variable(player, group, week), -1 * get_variable(player, group, other_week)])
-
-# SB9
-def symmetry_breaking_9():
-    for player in range(players_per_group + 1, num_players + 1):
-        plus_clause([get_variable(player, (player - 1) % num_groups + 1, 2)])
-
-# SB10
-def symmetry_breaking_10():
-    diff = players_per_group - 1
-    for group in range(1, num_groups + 1):
-        for week in range(2, num_weeks + 1):
-            for player in range(players_per_group + 1, 2 * players_per_group + 1):
-                if (player - diff != week):
-                    plus_clause([get_variable(player, group, week), -1 * get_variable(week + diff, group, player - diff)])
-
-# The [p + 1] column is [2, 1, 2, 3, ... , g]
-def not_enough_10():
-    player = players_per_group + 1
-    for week in range(3, num_weeks + 1):
-        for group in range(1, num_groups + 1):
-            if (group == week - 1): plus_clause([get_variable(player, group, week)])
-            else: plus_clause([-get_variable(player, group, week)])
-
-# SB11
-def symmetry_breaking_11():
-    diff = players_per_group - 1
-    for group in range(1, num_groups + 1):
-        for week in range(2, num_weeks):
-            for other_week in range(week + 1, num_weeks + 1):
-                plus_clause([-1 * get_variable(week + diff, group, week), -1 * get_variable(other_week + diff, group, other_week)])
-
-# SB12
-def symmetry_breaking_12():
-    for group in range(1, num_groups + 1):
-        for week in range(3, num_weeks + 1):
-            for player in range(players_per_group + 1, num_players + 1):
-                for other_player in range(player + players_per_group, num_players + 1, players_per_group):
-                    plus_clause([-1 * get_variable(player, group, week), -1 * get_variable(other_player, group, week)])
-
-def bonus_9_9_10():
-    lst = [0, 2, num_groups, 1]
-    for x in range (3, num_groups): lst.append(x)
-    for player in range(players_per_group + 1, 2 * players_per_group + 1):
-        for group in range(1, num_groups + 1):
-            if (group == lst[player - players_per_group]): plus_clause([get_variable(player, group, 3)])
-            else: plus_clause([-get_variable(player, group, 3)])
-
-# SB13 + 14: Add SB10 or not_enough_10 to make it executable
-def symmetry_breaking_13_14():
-    for group in range(2, num_groups + 1):
-        row_id = group + 1
-        for week in range(3, num_weeks + 1):
-            for player in range(2 * players_per_group + 1, num_players + 1, players_per_group):
-                temp_id = -1 * get_variable(player, group, week)
-                for other_player in range(player + 1, player + players_per_group):
-                    diff = other_player - player
-                    for other_group in range(1, num_groups + 1):
-                        x1 = get_variable(players_per_group + 1 + diff, other_group, row_id)
-                        x2 = get_variable(other_player, other_group, week)
-                        plus_clause([temp_id, x1, -x2])
-                        plus_clause([temp_id, -x1, x2])
 
 # Build the GS1 matrix
 def build_gs1():
@@ -356,24 +203,6 @@ def build_gs1():
                 if (group == a[row][col]): plus_clause([get_variable(player, group, week)])
                 else: plus_clause([-get_variable(player, group, week)])
 
-# SB15
-def symmetry_breaking_15():
-    for week in range(3, num_weeks + 1):
-        player = week + players_per_group - 1
-        plus_clause([get_variable(player, 1, week)])
-        for group in range(2, num_groups + 1):
-            plus_clause([-get_variable(player, group, week)])
-
-# SB16
-def symmetry_breaking_16():
-    for gs in range (2, num_groups):
-        start_player = gs * players_per_group + 1
-        diff = gs * players_per_group - 1
-        for player in range(start_player, start_player + players_per_group):
-            for other_player in range(player + 1, start_player + players_per_group):
-                for group in range(1, num_groups + 1):
-                    plus_clause([-get_variable(player, group, player - diff), -get_variable(other_player, group, other_player - diff)])
-
 # returns a unique identifier for the variable that represents the assignment of the player to the group in the week
 def get_variable(player, group, week):
     player -= 1
@@ -381,40 +210,16 @@ def get_variable(player, group, week):
     week -= 1
     return 1 + player + (group * num_players) + (week * num_players * num_groups)
 
-def get_variable_M(player1, player2, week):
-    if player1 > player2:
-        player1, player2 = player2, player1
-    player1 -= 1
-    player2 -= 1
-    week -= 1
-    offset = num_players * num_groups * num_weeks
-    base = num_players * (num_players - 1) // 2
-    combination_index = (player2 * (player2 - 1)) // 2 + player1
-    return 1 + offset + combination_index + (week * base)
 
 def resolve_variable(v):
     tmp = abs(v) - 1
-    if tmp < num_players * num_groups * num_weeks:
-        # Resolve G variables
-        player = tmp % num_players + 1
-        tmp //= num_players
-        group = tmp % num_groups + 1
-        tmp //= num_groups
-        week = tmp + 1
-        assert get_variable(player, group, week) == abs(v)
-        return player, group, week
-    else:
-        # Resolve M variables
-        tmp -= num_players * num_groups * num_weeks
-        week = tmp // (num_players * (num_players - 1) // 2) + 1
-        combination_index = tmp % (num_players * (num_players - 1) // 2)
-        for player2 in range(1, num_players + 1):
-            for player1 in range(player2):
-                if (player2 * (player2 - 1)) // 2 + player1 == combination_index:
-                    player1 += 1
-                    player2 += 1
-                    assert get_variable_M(player1, player2, week) == abs(v)
-                    return player1, player2, week
+    player = tmp % num_players + 1
+    tmp //= num_players
+    group = tmp % num_groups + 1
+    tmp //= num_groups
+    week = tmp + 1
+    assert get_variable(player, group, week) == abs(v)
+    return player, group, week
 
 def validate_result(solution):
     table = {}

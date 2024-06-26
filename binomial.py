@@ -15,7 +15,7 @@ num_weeks: int  # number of weeks
 players_per_group: int  # players per group
 num_groups: int  # number of groups
 num_players: int  # players per group * number of groups
-time_budget = 10
+time_budget = 600
 show_additional_info = True
 show_additional_info_str = "Yes"
 
@@ -32,9 +32,9 @@ def generate_all_clauses():
     ensure_unique_position_for_player_in_group()
     ensure_player_in_group_if_assigned_to_week()
     ensure_no_repeated_players_in_groups()
-    generate_symmetry_breaking_clause1()
-    generate_symmetry_breaking_clause2()
-    generate_symmetry_breaking_clause3()
+    # generate_symmetry_breaking_clause1()
+    # generate_symmetry_breaking_clause2()
+    # generate_symmetry_breaking_clause3()
 
 # (ALO) Every golfer plays at least once a week
 # x_w_p_g (1)
