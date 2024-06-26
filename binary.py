@@ -508,7 +508,7 @@ def solve_sat_problem():
         os.makedirs(directory_path)
 
     # Create the full path to the file "{problem}.cnf" in the directory "input_v1"
-    problem_name = f"{num_weeks}-{players_per_group}-{num_groups}-binary"
+    problem_name = f"{num_groups}-{players_per_group}-{num_weeks}-binary"
     file_name = problem_name + ".cnf"
     file_path = os.path.join(directory_path, file_name)
 

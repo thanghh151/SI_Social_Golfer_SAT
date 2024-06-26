@@ -22345,3 +22345,58 @@ Result added to Excel file: /content/out/results_2024-06-26.xlsx
 
 ------------------------------------------------------------------------------------------------------------------------
 
+Problem no. 1:
+Number of groups: 3.
+Players per group: 2.
+Number of weeks: 2.
+
+Variables: 63
+Clauses: 65
+Searching for a solution...
+A solution was found in 0.000s.
+Restarts: 3, decisions: 14, propagations: 112
+
++------+---------+---------+---------+
+| Week | Group 1 | Group 2 | Group 3 |
++------+---------+---------+---------+
+|  1   |   1,2   |   3,4   |   5,6   |
+|  2   |   1,3   |   2,5   |   4,6   |
++------+---------+---------+---------+
++-----+---+---+---+---+---+---+
+| W\P | 1 | 2 | 3 | 4 | 5 | 6 |
++-----+---+---+---+---+---+---+
+|  1  | 1 | 1 | 2 | 2 | 3 | 3 |
+|  2  | 1 | 2 | 1 | 3 | 2 | 3 |
++-----+---+---+---+---+---+---+
+Checking validation of the solution...
+Valid solution.
+
+Result added to Excel file: C:\Users\Thang\SI_Social_Golfer_SAT\out\results_2024-06-26.xlsx
+
+------------------------------------------------------------------------------------------------------------------------
+Problem no. 1:
+Number of groups: 6.
+Players per group: 6.
+Number of weeks: 7.
+
+Variables: 8532
+Clauses: 23658
+Searching for a solution...
+UNSAT. Time run: 0.000s.
+
+Result added to Excel file: C:\Users\Thang\SI_Social_Golfer_SAT\out\results_2024-06-26.xlsx
+
+------------------------------------------------------------------------------------------------------------------------
+Problem no. 1:
+Number of groups: 6.
+Players per group: 6.
+Number of weeks: 7.
+
+Variables: 8532
+Clauses: 23658
+Searching for a solution...
+UNSAT. Time run: 0.000s.
+
+Result added to Excel file: C:\Users\Thang\SI_Social_Golfer_SAT\out\results_2024-06-26.xlsx
+
+------------------------------------------------------------------------------------------------------------------------
