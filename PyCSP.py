@@ -15,7 +15,7 @@ from multiprocessing import Value
 
 def solve_social_golfers(data, result_dict, clauses):
     clear()
-    nWeeks, size, nGroups = data
+    nGroups, size, nWeeks = data
     nPlayers = nGroups * size
 
     print(f"Social Golfer Problem with {nPlayers} players, {nGroups} groups of size {size} and {nWeeks} weeks")
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         clauses = Value('i', 0)
         result_dict = {
             "ID": id_counter,
-            "Problem": f"{nWeeks}-{size}-{nGroups}",
+            "Problem": f"{nGroups}-{size}-{nWeeks}",
             "Type": "PyCSP",
             "Time": "",
             "Result": "",
