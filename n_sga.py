@@ -392,11 +392,11 @@ def solve_sat_problem():
     
     valid_combinations = find_valid_m1_m2()
     for m1, m2 in valid_combinations:
-        print(f"Trying m1 = {m1}, m2 = {m2}...")
+        # print(f"Trying m1 = {m1}, m2 = {m2}...")
         result_dict = {
             "ID": id_counter,
-            "Problem": f"{num_groups}-{players_per_group}-{num_weeks}",
-            "Type": "new_sequential",
+            "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
+            "Type": "sga",
             "Time": "",
             "Result": "",
             "Variables": 0,
@@ -405,18 +405,21 @@ def solve_sat_problem():
 
         print_to_console_and_log(
             f"Problem no. {id_counter}:\n" +
+            f"Number of players: {num_players}.\n" +
             f"Number of groups: {num_groups}.\n" +
-            f"Players per group: {players_per_group}.\n" + 
+            f"Players per group: {players_per_group}.\n" +
+            f"m1: {m1}.\n" + 
+            f"m2: {m2}.\n" +
             f"Number of weeks: {num_weeks}.\n")
 
         assert num_groups > 1 and players_per_group[0] > 1
 
         sat_solver = Glucose3(use_timer = True)
         generate_all_clauses(m1, m2)
-        print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
+        # print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
 
         # Store the number of variables and clauses before solving the problem
-        problem_name = f"{num_groups}-{players_per_group}-{num_weeks}"
+        problem_name = f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}"
         if not enable_kissat:
             num_vars = sat_solver.nof_vars()
             num_clauses = sat_solver.nof_clauses()
@@ -437,17 +440,17 @@ def solve_sat_problem():
         timer.start()
 
         sat_status = sat_solver.solve_limited(expect_interrupt = True)
-        print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
+        # print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
         if sat_status is False:
             elapsed_time = format(sat_solver.time(), ".3f")
             print_to_console_and_log(f"UNSAT. Time run: {elapsed_time}s.\n")
             result_dict["Result"] = "unsat"
             result_dict["Time"] = elapsed_time
-            print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
+            # print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
 
         else:
             solution = sat_solver.get_model()
-            print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
+            # print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
             if solution is None:
                 print_to_console_and_log(f"Time limit exceeded ({time_budget}s).\n")
                 result_dict["Result"] = "timeout"

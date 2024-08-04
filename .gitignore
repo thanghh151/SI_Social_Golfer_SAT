@@ -1,2 +1,7 @@
 # Project exclude paths
 /venv/
+/matrix_repeat_model.py
+/sga.py
+/nsc_sga.py
+/input_v1
+/console.log
