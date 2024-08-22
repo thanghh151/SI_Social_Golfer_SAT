@@ -32,7 +32,7 @@ def generate_all_clauses(m1, m2, num_groups):
     ensure_group_contains_exactly_p_players(m1, m2, num_groups)
     ensure_no_repeated_players_in_groups(num_groups)
     symmetry_breaking_1(m1, m2, num_groups)
-    # symmetry_breaking_2(m1, m2, num_groups)
+    symmetry_breaking_2(m1, m2, num_groups)
 
 def plus_clause(clause):
     sat_solver.add_clause(clause)
@@ -162,16 +162,12 @@ def symmetry_breaking_1(m1, m2, num_groups):
 # SB2: From week 2, first p players belong to p groups
 def symmetry_breaking_2(m1, m2, num_groups):
     for week in range(2, num_weeks + 1):
-        for player in range(1, num_players + 1):
-            if player <= m1 * players_per_group[0]:
-                right_group = (player - 1) // players_per_group[0] + 1
-            else:
-                right_group = m1 + (player - m1 * players_per_group[0] - 1) // players_per_group[1] + 1
+        for player in range(1, min(num_groups, players_per_group[0]) + 1):
             for group in range(1, num_groups + 1):
-                if group == right_group:
-                    sat_solver.add_clause([get_variable(player, group, week, num_groups)])
+                if group == player:
+                    plus_clause([get_variable(player, group, week, num_groups)])
                 else:
-                    sat_solver.add_clause([-1 * get_variable(player, group, week, num_groups)])
+                    plus_clause([-1 * get_variable(player, group, week, num_groups)])
 
 # def find_valid_m1_m2():
 #     k1 = players_per_group[0]
