@@ -27,11 +27,12 @@ all_clauses = []
 id_counter = 0
 
 def generate_all_clauses():
-    ensure_golfer_plays_exactly_once_per_week()
-    ensure_group_contains_exactly_p_players()
-    ensure_no_repeated_players_in_groups()
+    # ensure_golfer_plays_exactly_once_per_week()
+    # ensure_group_contains_exactly_p_players()
+    # ensure_no_repeated_players_in_groups()
     symmetry_breaking_1()
     symmetry_breaking_2()
+    symmetry_breaking_3()
     # symmetry_breaking_7()
     # 7-7-8
     # symmetry_breaking_8()
@@ -172,6 +173,23 @@ def symmetry_breaking_2():
                 else:
                     plus_clause([-1 * get_variable(player, group, week)])
 
+# SB3: In week 2, the first player in each group in week 1 determines the groups in week 2
+def symmetry_breaking_3():
+    for group in range(1, min(num_groups, players_per_group) + 1):  # Lặp qua các nhóm
+        first_player = group  # Người chơi đầu tiên ở mỗi nhóm
+        players_to_add = []   # Danh sách để lưu các người chơi sẽ thêm vào nhóm này
+        
+        # Tính toán các vị trí cho người chơi từ tuần 1
+        for i in range(1, players_per_group):
+            position = (group - 1) + (i * num_groups)
+            if position <= num_players:
+                players_to_add.append(position)
+        
+        # Thêm ràng buộc cho tất cả người chơi trong `players_to_add`
+        for player in players_to_add:
+            plus_clause([get_variable(player, group, 2)])
+
+                
 # SB7
 def symmetry_breaking_7():
     for week in range(2, num_weeks + 1):
