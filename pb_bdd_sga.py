@@ -17,7 +17,7 @@ from pypblib.pblib import PBConfig, Pb2cnf, WeightedLit
 from pysat.pb import *
 
 num_weeks: int  # number of weeks
-players_per_group: int  # players per group
+players_per_group: list[int]  # players per group
 num_groups: int  # number of groups
 num_players: int  # players per group * number of groups
 id_variable: int
@@ -122,20 +122,26 @@ def exactly_k(var: List[int], k):
 # w_g_x (2)
 def ensure_group_contains_exactly_p_players(m1, m2, num_groups):
     for week in range(1, num_weeks + 1):
-        # Ensure m1 groups with k1 players
-        if m1 > 0:
-            for group in range(1, m1 + 1):
-                list_vars = [-1]
-                for player in range(1, num_players + 1):
-                    list_vars.append(get_variable(player, group, week, num_groups))
-                exactly_k(list_vars, players_per_group[0])
-        # Ensure m2 groups with k2 players
         if m2 is not None:
-            for group in range(m1 + 1, m1 + m2 + 1):
+            # Groups from 1 to m2 with players_per_group[1] members
+            for group in range(1, m2 + 1):
                 list_vars = [-1]
                 for player in range(1, num_players + 1):
                     list_vars.append(get_variable(player, group, week, num_groups))
                 exactly_k(list_vars, players_per_group[1])
+            # Groups from m2 + 1 to num_groups with players_per_group[0] members
+            for group in range(m2 + 1, num_groups + 1):
+                list_vars = [-1]
+                for player in range(1, num_players + 1):
+                    list_vars.append(get_variable(player, group, week, num_groups))
+                exactly_k(list_vars, players_per_group[0])
+        else:
+            # All groups with players_per_group[0] members
+            for group in range(1, num_groups + 1):
+                list_vars = [-1]
+                for player in range(1, num_players + 1):
+                    list_vars.append(get_variable(player, group, week, num_groups))
+                exactly_k(list_vars, players_per_group[0])
 
 # Ensures that no players are repeated in the same group across different weeks and groups.
 # w_g_x_x_g_w (3)
@@ -155,10 +161,17 @@ def ensure_no_repeated_players_in_groups(num_groups):
 # SB1: The first week order is [1, 2, 3, ... x]
 def symmetry_breaking_1(m1, m2, num_groups):
     for player in range(1, num_players + 1):
-        if player <= m1 * players_per_group[0]:
-            right_group = (player - 1) // players_per_group[0] + 1
+        if m2 is None:
+            if player <= m1 * players_per_group[0]:
+                right_group = (player - 1) // players_per_group[0] + 1
+            else:
+                right_group = m1 + (player - m1 * players_per_group[0] - 1) // players_per_group[1] + 1
         else:
-            right_group = m1 + (player - m1 * players_per_group[0] - 1) // players_per_group[1] + 1
+            if player <= m2 * players_per_group[1]:
+                right_group = (player - 1) // players_per_group[1] + 1
+            else:
+                right_group = m2 + (player - m2 * players_per_group[1] - 1) // players_per_group[0] + 1
+        
         for group in range(1, num_groups + 1):
             if group == right_group:
                 sat_solver.add_clause([get_variable(player, group, 1, num_groups)])
@@ -168,12 +181,20 @@ def symmetry_breaking_1(m1, m2, num_groups):
 # SB2: From week 2, first p players belong to p groups
 def symmetry_breaking_2(m1, m2, num_groups):
     for week in range(2, num_weeks + 1):
-        for player in range(1, min(num_groups, players_per_group[0]) + 1):
-            for group in range(1, num_groups + 1):
-                if group == player:
-                    plus_clause([get_variable(player, group, week, num_groups)])
-                else:
-                    plus_clause([-1 * get_variable(player, group, week, num_groups)])
+        if m2 is not None:
+            for player in range(1, min(num_groups, players_per_group[1]) + 1):
+                for group in range(1, num_groups + 1):
+                    if group == player:
+                        plus_clause([get_variable(player, group, week, num_groups)])
+                    else:
+                        plus_clause([-1 * get_variable(player, group, week, num_groups)])
+        else:
+            for player in range(1, min(num_groups, players_per_group[0]) + 1):
+                for group in range(1, num_groups + 1):
+                    if group == player:
+                        plus_clause([get_variable(player, group, week, num_groups)])
+                    else:
+                        plus_clause([-1 * get_variable(player, group, week, num_groups)])
 
 # def find_valid_m1_m2():
 #     k1 = players_per_group[0]
@@ -416,7 +437,7 @@ def solve_sat_problem():
         result_dict = {
             "ID": id_counter,
             "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
-            "Type": "sga",
+            "Type": "sga_bdd",
             "Time": "",
             "Result": "",
             "Variables": 0,
