@@ -1,4 +1,4 @@
-from pysat.solvers import Glucose3, Solver
+from ortools.sat.python import cp_model
 from prettytable import PrettyTable
 from threading import Timer
 import datetime
@@ -16,144 +16,62 @@ from datetime import datetime
 num_weeks: int  # number of weeks
 players_per_group: list[int]  # players per group
 num_groups: int  # number of groups
-num_players: int 
+num_players: int
 id_variable: int
 time_budget = 60
 show_additional_info = True
 online_path = ''
-
-sat_solver: Solver
-
-enable_kissat = False
-all_clauses = []
 id_counter = 0
 
-def generate_all_clauses(m1, m2, num_groups):
-    ensure_golfer_plays_exactly_once_per_week(num_groups)
-    ensure_group_contains_exactly_p_players(m1, m2, num_groups)
-    ensure_no_repeated_players_in_groups(num_groups)
-    symmetry_breaking_1(m1, m2, num_groups)
-    # symmetry_breaking_2(m1, m2, num_groups)
+model = cp_model.CpModel()
+solver = cp_model.CpSolver()
 
-def plus_clause(clause):
-    sat_solver.add_clause(clause)
-    if (enable_kissat): all_clauses.append(clause)
+def generate_all_constraints(model, m1, m2, num_groups):
+    ensure_golfer_plays_exactly_once_per_week(model, num_groups)
+    ensure_group_contains_exactly_p_players(model, m1, m2, num_groups)
+    ensure_no_repeated_players_in_groups(model, num_groups)
+    # symmetry_breaking_1(model, m1, m2, num_groups)
+    # symmetry_breaking_2(model, m1, m2, num_groups)
 
-# (EO) Using binomial
-def exactly_one(var: list[int], num_groups):
-    n = len(var)
-    assert n == num_groups
+# Tạo biến cho mỗi người chơi, nhóm và tuần
+variables = {}
+for player in range(1, num_players + 1):
+    for group in range(1, num_groups + 1):
+        for week in range(1, num_weeks + 1):
+            variables[(player, group, week)] = get_variable(model, player, group, week, num_groups)
 
-    # (1): (ALO)
-    clause = []
-    for i in range(0, n):
-        clause.append(var[i])
-    plus_clause(clause)
-
-    # (2): (AMO)
-    for i in range (0, n):
-        for j in range (i + 1, n):
-            plus_clause([-1 * var[i], -1 * var[j]])
-
-# Every player plays exactly once a week
-# x_w_g (1)
-def ensure_golfer_plays_exactly_once_per_week(num_groups):
+def ensure_golfer_plays_exactly_once_per_week(model, num_groups):
     for player in range(1, num_players + 1):
-        for week in range(2, num_weeks + 1):
-            list = []
-            for group in range(1, num_groups + 1):
-                list.append(get_variable(player, group, week, num_groups))
-            exactly_one(list, num_groups)
+        for week in range(1, num_weeks + 1):
+            model.AddExactlyOne(variables[(player, group, week)] for group in range(1, num_groups + 1))
 
-# (EK) Using New Sequential encounter (NSC)
-def exactly_k(var: list[int], k):
-    global id_variable
-    n = len(var) - 1
-    assert n == num_players
-    map_register = [[0 for j in range(k + 1)] for i in range(n)]
-    for i in range(1, n):
-        for j in range(1, min(i, k) + 1):
-            id_variable += 1
-            map_register[i][j] = id_variable
-
-    # (1): If a bit is true, the first bit of the corresponding register is true
-    for i in range(1, n):
-        plus_clause([-1 * var[i], map_register[i][1]])
-
-    # (2): R[i - 1][j] = 1, R[i][j] = 1;
-    for i in range(2, n):
-        for j in range(1, min(i - 1, k) + 1):
-            plus_clause([-1 * map_register[i - 1][j], map_register[i][j]])
-
-    # (3): If bit i is on and R[i - 1][j - 1] = 1, R[i][j] = 1;
-    for i in range(2, n):
-        for j in range(2, min(i, k) + 1):
-            plus_clause([-1 * var[i], -1 * map_register[i - 1][j - 1], map_register[i][j]])
-
-    # (4): If bit i is off and R[i - 1][j] = 0, R[i][j] = 0;
-    for i in range(2, n):
-        for j in range(1, min(i - 1, k) + 1):
-            plus_clause([var[i], map_register[i - 1][j], -1 * map_register[i][j]])
-
-    # (5): If bit i is off, R[i][i] = 0;
-    for i in range(1, k + 1):
-        plus_clause([var[i], -1 * map_register[i][i]])
-
-    # (6): If R[i - 1][j - 1] = 0, R[i][j] = 0;
-    for i in range(2, n):
-        for j in range(2, min(i, k) + 1):
-            plus_clause([map_register[i - 1][j - 1], -1 * map_register[i][j]])
-
-    # (7): (At least k) R[n - 1][k] = 1 or (n-th bit is true and R[n - 1][k - 1] = 1)
-    plus_clause([map_register[n - 1][k], var[n]])
-    plus_clause([map_register[n - 1][k], map_register[n - 1][k - 1]])
-    # plus_clause([map_register[n - 1][k - 1]])
-
-    # (8): (At most k) If i-th bit is true, R[i - 1][k] = 0;
-    for i in range(k + 1, n + 1):
-        plus_clause([-1 * var[i], -1 * map_register[i - 1][k]])
-
-# A group contains exactly p players
-# w_g_x (2)
-def ensure_group_contains_exactly_p_players(m1, m2, num_groups):
+def ensure_group_contains_exactly_p_players(model, m1, m2, num_groups):
     for week in range(1, num_weeks + 1):
-        if m2 is not None:
-            # Groups from 1 to m2 with players_per_group[1] members
+        if m2 > 0:
             for group in range(1, m2 + 1):
-                list_vars = [-1]
-                for player in range(1, num_players + 1):
-                    list_vars.append(get_variable(player, group, week, num_groups))
-                exactly_k(list_vars, players_per_group[1])
-            # Groups from m2 + 1 to num_groups with players_per_group[0] members
-            for group in range(m2 + 1, num_groups + 1):
-                list_vars = [-1]
-                for player in range(1, num_players + 1):
-                    list_vars.append(get_variable(player, group, week, num_groups))
-                exactly_k(list_vars, players_per_group[0])
-        else:
-            # All groups with players_per_group[0] members
-            for group in range(1, num_groups + 1):
-                list_vars = [-1]
-                for player in range(1, num_players + 1):
-                    list_vars.append(get_variable(player, group, week, num_groups))
-                exactly_k(list_vars, players_per_group[0])
+                model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[1])
 
-# Ensures that no players are repeated in the same group across different weeks and groups.
-# w_g_x_x_g_w (3)
-def ensure_no_repeated_players_in_groups(num_groups):
+            for group in range(m2 + 1, num_groups + 1):
+                model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[0])
+        else:
+            for group in range(1, num_groups + 1):
+                model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[0])
+
+def ensure_no_repeated_players_in_groups(model, num_groups):
     for week in range(1, num_weeks + 1):
         for group in range(1, num_groups + 1):
             for golfer1 in range(1, num_players + 1):
                 for golfer2 in range(golfer1 + 1, num_players + 1):
                     for other_group in range(1, num_groups + 1):
                         for other_week in range(week + 1, num_weeks + 1):
-                            clause = [-1 * get_variable(golfer1, group, week, num_groups),
-                                      -1 * get_variable(golfer2, group, week, num_groups),
-                                      -1 * get_variable(golfer1, other_group, other_week, num_groups),
-                                      -1 * get_variable(golfer2, other_group, other_week, num_groups)]
-                            plus_clause(clause)
-# SB1: The first week order is [1, 2, 3, ... x]
-def symmetry_breaking_1(m1, m2, num_groups):
+                            model.AddBoolOr([
+                                get_variable(model, golfer1, group, week, num_groups).Not(),
+                                get_variable(model, golfer2, group, week, num_groups).Not(),
+                                get_variable(model, golfer1, other_group, other_week, num_groups).Not(),
+                                get_variable(model, golfer2, other_group, other_week, num_groups).Not()
+                            ])
+
+def symmetry_breaking_1(model, m1, m2, num_groups):
     for player in range(1, num_players + 1):
         if m2 is None:
             if player <= m1 * players_per_group[0]:
@@ -165,82 +83,53 @@ def symmetry_breaking_1(m1, m2, num_groups):
                 right_group = (player - 1) // players_per_group[1] + 1
             else:
                 right_group = m2 + (player - m2 * players_per_group[1] - 1) // players_per_group[0] + 1
-        
+
         for group in range(1, num_groups + 1):
             if group == right_group:
-                sat_solver.add_clause([get_variable(player, group, 1, num_groups)])
+                model.Add(get_variable(model, player, group, 1, num_groups) == 1)
             else:
-                sat_solver.add_clause([-1 * get_variable(player, group, 1, num_groups)])
+                model.Add(get_variable(model, player, group, 1, num_groups) == 0)
 
-# SB2: From week 2, first p players belong to p groups
 def symmetry_breaking_2(m1, m2, num_groups):
     if m2 is not None:
         max_week = math.floor((num_players - players_per_group[1]) / players_per_group[0]) - 1
         for week in range(2, max_week + 1):
             for player in range(1, min(num_groups, players_per_group[1]) + 1):
                 for group in range(1, num_groups + 1):
-                    if group == player:
-                        plus_clause([get_variable(player, group, week, num_groups)])
-                    else:
-                        plus_clause([-1 * get_variable(player, group, week, num_groups)])
+                    model.Add(get_variable(player, group, week, num_groups) == 1)
     else:
         for week in range(2, max_week + 1):
             for player in range(1, min(num_groups, players_per_group[0]) + 1):
                 for group in range(1, num_groups + 1):
-                    if group == player:
-                        plus_clause([get_variable(player, group, week, num_groups)])
-                    else:
-                        plus_clause([-1 * get_variable(player, group, week, num_groups)])
-
-# def find_valid_m1_m2():
-#     k1 = players_per_group[0]
-#     k2 = players_per_group[1] if len(players_per_group) > 1 else None
-
-#     valid_combinations = []
-#     for m1 in range(num_groups + 1):
-#         remaining_players = num_players - m1 * k1
-#         if k2 and remaining_players % k2 == 0:
-#             m2 = remaining_players // k2
-#             if m1 + m2 == num_groups:
-#                 valid_combinations.append((m1, m2))
-#         elif not k2 and remaining_players == 0 and m1 == num_groups:
-#             valid_combinations.append((m1, 0))
-    
-#     return valid_combinations
+                    model.Add(get_variable(player, group, week, num_groups) == 1)
 
 def find_all_valid_combinations():
     valid_combinations = set()
-    
+
     k1 = players_per_group[0]
     k2 = players_per_group[1] if len(players_per_group) > 1 else None
-    
+
     for num_groups in range(2, num_players + 1):
         for m1 in range(0, num_players + 1):
             for m2 in range(0, num_players + 1):
                 if k2 is not None:
-                    if k1 * m1 + k2 * m2 == num_players and m1 + m2 == num_groups:
+                    if m1 * k1 + m2 * k2 == num_players and m1 + m2 == num_groups:
                         valid_combinations.add((k1, k2, m1, m2, num_groups))
                 else:
-                    if k1 * m1 == num_players and m1 == num_groups:
-                        valid_combinations.add((k1, None, m1, None, num_groups))
-    
+                    if m1 * k1 == num_players and m1 == num_groups:
+                        valid_combinations.add((k1, None, m1, 0, num_groups))
+
     return list(valid_combinations)
 
-# returns a unique identifier for the variable that represents the assignment of the player to the group in the week
-def get_variable(player, group, week, num_groups):
-    player -= 1
-    group -= 1
-    week -= 1
-    return 1 + player + (group * num_players) + (week * num_players * num_groups)
+def get_variable(model, player, group, week, num_groups):
+    return model.NewBoolVar(f"player_{player}_group_{group}_week_{week}")
+
 
 def resolve_variable(v, num_groups):
-    tmp = abs(v) - 1
-    player = tmp % num_players + 1
-    tmp //= num_players
-    group = tmp % num_groups + 1
-    tmp //= num_groups
-    week = tmp + 1
-    assert get_variable(player, group, week, num_groups) == abs(v)
+    week = (v - 1) // (num_players * num_groups) + 1
+    remainder = (v - 1) % (num_players * num_groups)
+    group = remainder // num_players + 1
+    player = remainder % num_players + 1
     return player, group, week
 
 def validate_result(solution):
@@ -349,7 +238,7 @@ def write_to_cnf(num_vars, num_clauses, problem_name):
         for clause in all_clauses:
             for literal in clause: writer.write(str(literal) + " ")
             writer.write("0\n")
-    
+
     print_to_console_and_log("CNF written to " + file_path + ".\n")
 
 def write_to_xlsx(result_dict):
@@ -422,14 +311,12 @@ def run_kissat(problem_name):
 
 # solve the problem using the SAT Solver and write the results to xlsx file
 def solve_sat_problem():
-    global num_players, id_variable, sat_solver, id_counter
+    global num_players, id_variable, id_counter
 
-    
     valid_combinations = find_all_valid_combinations()
     for k1, k2, m1, m2, num_groups in valid_combinations:
         id_variable = num_players * num_groups * num_weeks
         id_counter += 1
-        # print(f"Trying k1 = {k1}, k2 = {k2}, m1 = {m1}, m2 = {m2}, num_groups = {num_groups}...")
         result_dict = {
             "ID": id_counter,
             "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
@@ -447,26 +334,19 @@ def solve_sat_problem():
             f"Players per group: {players_per_group}.\n" +
             f"k1: {k1}.\n" +
             f"k2: {k2}.\n" +
-            f"m1: {m1}.\n" + 
+            f"m1: {m1}.\n" +
             f"m2: {m2}.\n" +
             f"Number of weeks: {num_weeks}.\n")
 
         assert num_groups > 1 and players_per_group[0] > 1
 
-        sat_solver = Glucose3(use_timer = True)
-        generate_all_clauses(m1, m2, num_groups)
-        # print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
+        model = cp_model.CpModel()
+        generate_all_constraints(model, m1, m2, num_groups)
+        solver = cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds = time_budget
 
-        # Store the number of variables and clauses before solving the problem
-        problem_name = f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}"
-        if not enable_kissat:
-            num_vars = sat_solver.nof_vars()
-            num_clauses = sat_solver.nof_clauses()
-        else:
-            num_vars = id_variable
-            assert num_vars == sat_solver.nof_vars()
-            num_clauses = len(all_clauses)
-            # print_to_console_and_log(f"{num_clauses} {sat_solver.nof_clauses()}")
+        num_vars = len(model.Proto().variables)
+        num_clauses = len(model.Proto().constraints)
 
         result_dict["Variables"] = num_vars
         result_dict["Clauses"] = num_clauses
@@ -474,55 +354,43 @@ def solve_sat_problem():
             print_to_console_and_log("Variables: " + str(num_vars))
             print_to_console_and_log("Clauses: " + str(num_clauses))
 
+        # Check if the model has been populated with variables and constraints
+        if num_vars == 0 or num_clauses == 0:
+            print_to_console_and_log("Error: Model has no variables or constraints.")
+            continue
+
         print_to_console_and_log("Searching for a solution...")
-        timer = Timer(time_budget, interrupt, [sat_solver])
+        timer = Timer(time_budget, interrupt, [solver])
         timer.start()
 
-        sat_status = sat_solver.solve_limited(expect_interrupt = True)
-        # print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
-        if sat_status is False:
-            elapsed_time = format(sat_solver.time(), ".3f")
-            print_to_console_and_log(f"UNSAT. Time run: {elapsed_time}s.\n")
-            result_dict["Result"] = "unsat"
-            result_dict["Time"] = elapsed_time
-            # print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
-
-        else:
-            solution = sat_solver.get_model()
-            # print(sat_solver.get_model(), sat_solver.nof_clauses(), sat_solver.nof_vars())
-            if solution is None:
-                print_to_console_and_log(f"Time limit exceeded ({time_budget}s).\n")
-                result_dict["Result"] = "timeout"
-                result_dict["Time"] = time_budget
-            
-            else:
-                elapsed_time = format(sat_solver.time(), ".3f")
-                print_to_console_and_log(f"A solution was found in {elapsed_time}s.")
+        try:
+            status = solver.Solve(model)
+            elapsed_time = format(solver.WallTime(), ".3f")
+            print_to_console_and_log(f"Solver status: {status}")
+            if status == cp_model.INFEASIBLE:
+                print_to_console_and_log(f"UNSAT. Time run: {elapsed_time}s.\n")
+                result_dict["Result"] = "unsat"
+                result_dict["Time"] = elapsed_time
+            elif status == cp_model.FEASIBLE or status == cp_model.OPTIMAL:
+                print_to_console_and_log(f"SAT. Time run: {elapsed_time}s.\n")
                 result_dict["Result"] = "sat"
                 result_dict["Time"] = elapsed_time
+                solution = [solver.Value(var) for var in model.Proto().variables]
+                print_to_console_and_log("Checking solution legitimacy...")
+                check_legit(solution, num_groups)
+            else:
+                print_to_console_and_log(f"Unknown status: {status}")
+        except Exception as e:
+            print_to_console_and_log(f"Exception during solving: {e}")
+        finally:
+            timer.cancel()
 
-                if show_additional_info:
-                    sat_accum_stats = sat_solver.accum_stats()
-                    print_to_console_and_log("Restarts: " + str(sat_accum_stats['restarts']) +
-                            ", decisions: " + str(sat_accum_stats['decisions']) +
-                            ", propagations: " + str(sat_accum_stats["propagations"]) + '\n')
-                if not check_legit(solution, num_groups):
-                    timer.cancel()
-                    sys.exit(1)
-
-        timer.cancel()
-        sat_solver.delete()
-        
-        if enable_kissat:
-            write_to_cnf(num_vars, num_clauses, problem_name)
-            run_kissat(problem_name)
         write_to_xlsx(result_dict)
-        all_clauses.clear()
-        
+
         print_to_console_and_log('-' * 120)
 
-# Open the log file in append mode
 log_file = open(online_path + 'console.log', 'a')
+
 
 # Define a custom print function that writes to both console and log file
 def print_to_console_and_log(*args, **kwargs):
@@ -539,12 +407,12 @@ def run_from_input_file():
             parts = line.split()
             try:
                 num_players = int(parts[0])
-                
+
                 # Clean and validate the list part
                 list_part = parts[1].strip()
                 if not (list_part.startswith('[') and list_part.endswith(']')):
                     raise SyntaxError("List part is not properly formatted")
-                
+
                 players_per_group = ast.literal_eval(list_part)
                 num_weeks = int(parts[2])
                 solve_sat_problem()

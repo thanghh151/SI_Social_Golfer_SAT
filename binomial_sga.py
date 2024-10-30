@@ -35,9 +35,9 @@ def generate_all_clauses(m1, m2, num_groups):
     ensure_unique_position_for_player_in_group(m1, m2, num_groups)
     ensure_player_in_group_if_assigned_to_week(m1, m2, num_groups)
     ensure_no_repeated_players_in_groups(m1, m2, num_groups)
-    # generate_symmetry_breaking_clause1()
-    # generate_symmetry_breaking_clause2()
-    # generate_symmetry_breaking_clause3()
+    generate_symmetry_breaking_clause1(m1, m2, num_groups)
+    generate_symmetry_breaking_clause2(m1, m2, num_groups)
+    generate_symmetry_breaking_clause3(m1, m2, num_groups)
 
 # (ALO) Every golfer plays at least once a week
 # x_w_p_g (1)
@@ -181,36 +181,40 @@ def ensure_no_repeated_players_in_groups(m1, m2, num_groups):
                             all_clauses.append(clause)
 
 #(AMO) ensure no two players occupy the same position in the same group in the same week (x_p_g_w_x)
-def generate_symmetry_breaking_clause1():
+def generate_symmetry_breaking_clause1(m1, m2, num_groups):
     for golfer1 in range(1, num_players + 1):
-        for position1 in range(1, players_per_group):
-            for group in range(1, num_groups + 1):
+        for group in range(1, num_groups + 1):
+            if m2 is None:
+                group_size = players_per_group[0]
+            else:
+                group_size = players_per_group[1] if group <= m2 else players_per_group[0]
+            for position1 in range(1, group_size):
                 for week in range(1, num_weeks + 1):
                     for golfer2 in range(1, golfer1 + 1):
-                        clause = [-1 * get_variable(golfer1, position1, group, week),
-                                  -1 * get_variable(golfer2, position1 + 1, group, week)]
+                        clause = [-1 * get_variable(golfer1, position1, group, week, num_groups),
+                                  -1 * get_variable(golfer2, position1 + 1, group, week, num_groups)]
                         sat_solver.add_clause(clause)
                         all_clauses.append(clause)
 
 # (AMO) A player cannot be in the first position of a group in a week if they are in the first position of the next group in the same week
 # x_g_w_x                        
-def generate_symmetry_breaking_clause2():
+def generate_symmetry_breaking_clause2(m1, m2, num_groups):
     for golfer1 in range(1, num_players + 1):
         for group in range(1, num_groups):
             for week in range(1, num_weeks + 1):
                 for golfer2 in range(1, golfer1):
-                    clause = [-1 * get_variable(golfer1, 1, group, week),
-                              -1 * get_variable(golfer2, 1, group + 1, week)]
+                    clause = [-1 * get_variable(golfer1, 1, group, week, num_groups),
+                              -1 * get_variable(golfer2, 1, group + 1, week, num_groups)]
                     sat_solver.add_clause(clause)
                     all_clauses.append(clause)
 
 # (AMO) A player cannot be in the second position of the first group in a week if they are in the second position of the first group in the next week
-def generate_symmetry_breaking_clause3():
+def generate_symmetry_breaking_clause3(m1, m2, num_groups):
     for golfer1 in range(1, num_players + 1):
         for week in range(1, num_weeks):
             for golfer2 in range(1, golfer1 + 1):
-                clause = [-1 * get_variable(golfer1, 2, 1, week),
-                          -1 * get_variable(golfer2, 2, 1, week + 1)]
+                clause = [-1 * get_variable(golfer1, 2, 1, week, num_groups),
+                          -1 * get_variable(golfer2, 2, 1, week + 1, num_groups)]
                 sat_solver.add_clause(clause)
                 all_clauses.append(clause)
 
