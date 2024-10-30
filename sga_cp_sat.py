@@ -3,7 +3,6 @@ import time
 import pandas as pd
 import os
 from openpyxl import load_workbook, Workbook
-from zipfile import BadZipFile
 from openpyxl.utils.dataframe import dataframe_to_rows
 from datetime import datetime
 
@@ -13,9 +12,11 @@ def read_parameters_from_file(file_path):
         lines = file.readlines()
     return lines
 
+# Đường dẫn đến file data_new.txt
 file_path = 'data_new.txt'
 online_path = './'  # Adjust this path as needed
 
+# Đọc tham số từ file
 lines = read_parameters_from_file(file_path)
 
 # Open the log file in append mode
@@ -61,97 +62,100 @@ def run_model(num_players, num_weeks, players_per_group, id_counter, time_budget
     valid_combinations = find_all_valid_combinations(num_players, players_per_group)
     print_to_console_and_log("Valid combinations (k1, k2, m1, m2, num_groups):", valid_combinations)
 
-    # Sử dụng số nhóm tính toán được để tạo biến cho mỗi người chơi, nhóm và tuần
-    num_groups = valid_combinations[0][4]  # Chọn một kết hợp hợp lệ (chỉ ví dụ, có thể chọn cái khác)
-    m2 = valid_combinations[0][3]
-    variables = {}
-    for player in range(1, num_players + 1):
-        for group in range(1, num_groups + 1):
-            for week in range(1, num_weeks + 1):
-                variables[(player, group, week)] = model.NewBoolVar(f'player_{player}_group_{group}_week_{week}')
+    for combination in valid_combinations:
+        k1, k2, m1, m2, num_groups = combination
+        print_to_console_and_log(f"Running model for combination: k1={k1}, k2={k2}, m1={m1}, m2={m2}, num_groups={num_groups}")
 
-    def get_variable(golfer, group, week):
-        return variables[(golfer, group, week)]
-
-    # Ràng buộc: Mỗi người chơi chỉ xuất hiện trong một nhóm mỗi tuần
-    for player in range(1, num_players + 1):
-        for week in range(1, num_weeks + 1):
-            model.AddExactlyOne(variables[(player, group, week)] for group in range(1, num_groups + 1))
-
-    # Ràng buộc: Mỗi nhóm phải có một số lượng người chơi nhất định mỗi tuần
-    for week in range(1, num_weeks + 1):
-        if m2 > 0:
-            for group in range(1, m2 + 1):
-                model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[1])
-
-            for group in range(m2 + 1, num_groups + 1):
-                model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[0])
-        else:
+        # Tạo biến cho mỗi người chơi, nhóm và tuần
+        variables = {}
+        for player in range(1, num_players + 1):
             for group in range(1, num_groups + 1):
-                model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[0])
+                for week in range(1, num_weeks + 1):
+                    variables[(player, group, week)] = model.NewBoolVar(f'player_{player}_group_{group}_week_{week}')
 
-    # Áp dụng các ràng buộc không cho phép golfer1 và golfer2 xuất hiện cùng nhau
-    for week in range(1, num_weeks + 1):
-        for group in range(1, num_groups + 1):
-            for golfer1 in range(1, num_players + 1):
-                for golfer2 in range(golfer1 + 1, num_players + 1):
-                    for other_group in range(1, num_groups + 1):
-                        for other_week in range(week + 1, num_weeks + 1):
-                            model.AddBoolOr([
-                                get_variable(golfer1, group, week).Not(),
-                                get_variable(golfer2, group, week).Not(),
-                                get_variable(golfer1, other_group, other_week).Not(),
-                                get_variable(golfer2, other_group, other_week).Not()
-                            ])
+        def get_variable(golfer, group, week):
+            return variables[(golfer, group, week)]
 
-    solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = time_budget
-    start_time = time.time()
-    status = solver.Solve(model)
-    end_time = time.time()
-
-    # Hàm hiển thị giải pháp
-    def display_solution():
-        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-            print_to_console_and_log("Solution Found:")
+        # Ràng buộc: Mỗi người chơi chỉ xuất hiện trong một nhóm mỗi tuần
+        for player in range(1, num_players + 1):
             for week in range(1, num_weeks + 1):
-                print_to_console_and_log(f"\nWeek {week}:")
+                model.AddExactlyOne(variables[(player, group, week)] for group in range(1, num_groups + 1))
+
+        # Ràng buộc: Mỗi nhóm phải có một số lượng người chơi nhất định mỗi tuần
+        for week in range(1, num_weeks + 1):
+            if m2 > 0:
+                for group in range(1, m2 + 1):
+                    model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[1])
+
+                for group in range(m2 + 1, num_groups + 1):
+                    model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[0])
+            else:
                 for group in range(1, num_groups + 1):
-                    group_members = []
-                    for player in range(1, num_players + 1):
-                        if solver.Value(variables[(player, group, week)]):
-                            group_members.append(str(player))
-                    print_to_console_and_log(f"  Group {group}: " + ", ".join(group_members))
-        elif status == cp_model.INFEASIBLE:
-            print_to_console_and_log("No solution found.")
-        elif status == cp_model.MODEL_INVALID:
-            print_to_console_and_log("Model invalid.")
-        elif status == cp_model.UNKNOWN:
-            print_to_console_and_log("Solver stopped due to time limit or other reasons.")
+                    model.Add(sum(variables[(player, group, week)] for player in range(1, num_players + 1)) == players_per_group[0])
 
-    # Gọi hàm hiển thị kết quả
-    display_solution()
+        # Áp dụng các ràng buộc không cho phép golfer1 và golfer2 xuất hiện cùng nhau
+        for week in range(1, num_weeks + 1):
+            for group in range(1, num_groups + 1):
+                for golfer1 in range(1, num_players + 1):
+                    for golfer2 in range(golfer1 + 1, num_players + 1):
+                        for other_group in range(1, num_groups + 1):
+                            for other_week in range(week + 1, num_weeks + 1):
+                                model.AddBoolOr([
+                                    get_variable(golfer1, group, week).Not(),
+                                    get_variable(golfer2, group, week).Not(),
+                                    get_variable(golfer1, other_group, other_week).Not(),
+                                    get_variable(golfer2, other_group, other_week).Not()
+                                ])
 
-    # In ra số clause, variable, thời gian giải bài toán
-    num_variables = len(model.Proto().variables)
-    num_constraints = len(model.Proto().constraints)
-    solving_time = end_time - start_time
-    print_to_console_and_log(f"Number of variables: {num_variables}")
-    print_to_console_and_log(f"Number of constraints: {num_constraints}")
-    print_to_console_and_log(f"Solving time: {solving_time:.3f} seconds")
+        # Giải quyết vấn đề
+        solver = cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds = time_budget
+        start_time = time.time()
+        status = solver.Solve(model)
+        end_time = time.time()
 
-    # Collect results
-    result_dict = {
-        "ID": id_counter,
-        "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
-        "Type": "cp-sat",
-        "Time": f"{solving_time:.3f}",
-        "Result": "sat" if status in [cp_model.OPTIMAL, cp_model.FEASIBLE] else "unsat" if status == cp_model.INFEASIBLE else "time_out",
-        "Variables": num_variables,
-        "Clauses": num_constraints
-    }
-    results.append(result_dict)
-    write_to_xlsx(result_dict)
+        # Hàm hiển thị giải pháp
+        def display_solution():
+            if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+                print_to_console_and_log("Solution Found:")
+                for week in range(1, num_weeks + 1):
+                    print_to_console_and_log(f"\nWeek {week}:")
+                    for group in range(1, num_groups + 1):
+                        group_members = []
+                        for player in range(1, num_players + 1):
+                            if solver.Value(variables[(player, group, week)]):
+                                group_members.append(str(player))
+                        print_to_console_and_log(f"  Group {group}: " + ", ".join(group_members))
+            elif status == cp_model.INFEASIBLE:
+                print_to_console_and_log("No solution found.")
+            elif status == cp_model.MODEL_INVALID:
+                print_to_console_and_log("Model invalid.")
+            elif status == cp_model.UNKNOWN:
+                print_to_console_and_log("Solver stopped due to time limit or other reasons.")
+
+        # Gọi hàm hiển thị kết quả
+        display_solution()
+
+        # In ra số clause, variable, thời gian giải bài toán
+        num_variables = len(model.Proto().variables)
+        num_constraints = len(model.Proto().constraints)
+        solving_time = end_time - start_time
+        print_to_console_and_log(f"Number of variables: {num_variables}")
+        print_to_console_and_log(f"Number of constraints: {num_constraints}")
+        print_to_console_and_log(f"Solving time: {solving_time:.4f} seconds")
+
+        # Collect results
+        result_dict = {
+            "ID": id_counter,
+            "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
+            "Type": "cp-sat",
+            "Time": f"{solving_time:.4f} seconds",
+            "Result": "sat" if status in [cp_model.OPTIMAL, cp_model.FEASIBLE] else "unsat" if status == cp_model.INFEASIBLE else "time_out",
+            "Variables": num_variables,
+            "Clauses": num_constraints
+        }
+        results.append(result_dict)
+        write_to_xlsx(result_dict)
 
 # Function to write results to an Excel file
 def write_to_xlsx(result_dict):
