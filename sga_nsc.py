@@ -1,4 +1,3 @@
-from typing import List
 from pysat.solvers import Glucose3, Solver
 from prettytable import PrettyTable
 from threading import Timer
@@ -7,19 +6,17 @@ import pandas as pd
 import os
 import sys
 import ast
+import math
 from openpyxl import load_workbook
 from openpyxl import Workbook
 from zipfile import BadZipFile
 from openpyxl.utils.dataframe import dataframe_to_rows
 from datetime import datetime
-from pypblib import pblib
-from pypblib.pblib import PBConfig, Pb2cnf, WeightedLit
-from pysat.pb import *
 
 num_weeks: int  # number of weeks
 players_per_group: list[int]  # players per group
 num_groups: int  # number of groups
-num_players: int  # players per group * number of groups
+num_players: int 
 id_variable: int
 time_budget = 60
 show_additional_info = True
@@ -31,18 +28,12 @@ enable_kissat = False
 all_clauses = []
 id_counter = 0
 
-def is_prime(x: int) -> bool:
-    if x < 2: return False
-    for i in range(2, int(x ** 0.5) + 1):
-        if x % i == 0: return False
-    return True
-
 def generate_all_clauses(m1, m2, num_groups):
     ensure_golfer_plays_exactly_once_per_week(num_groups)
     ensure_group_contains_exactly_p_players(m1, m2, num_groups)
     ensure_no_repeated_players_in_groups(num_groups)
     symmetry_breaking_1(m1, m2, num_groups)
-    symmetry_breaking_2(m1, m2, num_groups)
+    # symmetry_breaking_2(m1, m2, num_groups)
 
 def plus_clause(clause):
     sat_solver.add_clause(clause)
@@ -74,49 +65,53 @@ def ensure_golfer_plays_exactly_once_per_week(num_groups):
                 list.append(get_variable(player, group, week, num_groups))
             exactly_one(list, num_groups)
 
-# (EK) Using BDD PBlib
-def exactly_k(var: List[int], k):
+# (EK) Using New Sequential encounter (NSC)
+def exactly_k(var: list[int], k):
     global id_variable
-    # print(f"id_variable: {id_variable}")
+    n = len(var) - 1
+    assert n == num_players
+    map_register = [[0 for j in range(k + 1)] for i in range(n)]
+    for i in range(1, n):
+        for j in range(1, min(i, k) + 1):
+            id_variable += 1
+            map_register[i][j] = id_variable
 
-    # print(f"var: {var}")
-    # n = len(var) - 1
-    # assert n == num_players
+    # (1): If a bit is true, the first bit of the corresponding register is true
+    for i in range(1, n):
+        plus_clause([-1 * var[i], map_register[i][1]])
 
-    # pbConfig = PBConfig()
-    # pbConfig.set_PB_Encoder(pblib.PB_BDD)
+    # (2): R[i - 1][j] = 1, R[i][j] = 1;
+    for i in range(2, n):
+        for j in range(1, min(i - 1, k) + 1):
+            plus_clause([-1 * map_register[i - 1][j], map_register[i][j]])
 
-    # Create a Pb2cnf object
-    # pb2 = Pb2cnf(pbConfig)
+    # (3): If bit i is on and R[i - 1][j - 1] = 1, R[i][j] = 1;
+    for i in range(2, n):
+        for j in range(2, min(i, k) + 1):
+            plus_clause([-1 * var[i], -1 * map_register[i - 1][j - 1], map_register[i][j]])
 
-    # Create a list to hold the formula
-    formula = []
+    # (4): If bit i is off and R[i - 1][j] = 0, R[i][j] = 0;
+    for i in range(2, n):
+        for j in range(1, min(i - 1, k) + 1):
+            plus_clause([var[i], map_register[i - 1][j], -1 * map_register[i][j]])
 
-    # Create a list to hold the weights are 1
-    weights = [1] * len(var)
-    # print(f"weights: {weights}")
+    # (5): If bit i is off, R[i][i] = 0;
+    for i in range(1, k + 1):
+        plus_clause([var[i], -1 * map_register[i][i]])
 
-    # Encode the AtLeastK and AtMostK constraints
-    # max_var = pb2.encode_at_least_k(var, k, formula, id_variable + 1)
-    # max_var = pb2.encode_at_most_k(var, k, formula, max_var + 1)
+    # (6): If R[i - 1][j - 1] = 0, R[i][j] = 0;
+    for i in range(2, n):
+        for j in range(2, min(i, k) + 1):
+            plus_clause([map_register[i - 1][j - 1], -1 * map_register[i][j]])
 
-    # encode_both()
-    # max_var = pb2.encode_both(weights, var, k, k, formula, id_variable + 1)
+    # (7): (At least k) R[n - 1][k] = 1 or (n-th bit is true and R[n - 1][k - 1] = 1)
+    plus_clause([map_register[n - 1][k], var[n]])
+    plus_clause([map_register[n - 1][k], map_register[n - 1][k - 1]])
+    # plus_clause([map_register[n - 1][k - 1]])
 
-    pb_encoder = PBEnc.equals(lits=var, weights=weights, bound=k, top_id=id_variable, encoding=EncType.bdd)
-    formula = pb_encoder.clauses
-
-    # Add constraints by calling the plus_clause function
-    for clause in formula: plus_clause(clause)
-
-    # print(f"Formula: {formula}")
-
-    # Update the global variable id_variable
-    # id_variable = max_var
-    id_variable = max(max(abs(lit) for lit in clause) for clause in formula)
-    # print(f"id_variable: {id_variable}")
-
-    # print(f"Max var: {max_var}")
+    # (8): (At most k) If i-th bit is true, R[i - 1][k] = 0;
+    for i in range(k + 1, n + 1):
+        plus_clause([-1 * var[i], -1 * map_register[i - 1][k]])
 
 # A group contains exactly p players
 # w_g_x (2)
@@ -157,7 +152,6 @@ def ensure_no_repeated_players_in_groups(num_groups):
                                       -1 * get_variable(golfer1, other_group, other_week, num_groups),
                                       -1 * get_variable(golfer2, other_group, other_week, num_groups)]
                             plus_clause(clause)
-
 # SB1: The first week order is [1, 2, 3, ... x]
 def symmetry_breaking_1(m1, m2, num_groups):
     for player in range(1, num_players + 1):
@@ -180,15 +174,17 @@ def symmetry_breaking_1(m1, m2, num_groups):
 
 # SB2: From week 2, first p players belong to p groups
 def symmetry_breaking_2(m1, m2, num_groups):
-    for week in range(2, num_weeks + 1):
-        if m2 is not None:
+    if m2 is not None:
+        max_week = math.floor((num_players - players_per_group[1]) / players_per_group[0]) - 1
+        for week in range(2, max_week + 1):
             for player in range(1, min(num_groups, players_per_group[1]) + 1):
                 for group in range(1, num_groups + 1):
                     if group == player:
                         plus_clause([get_variable(player, group, week, num_groups)])
                     else:
                         plus_clause([-1 * get_variable(player, group, week, num_groups)])
-        else:
+    else:
+        for week in range(2, max_week + 1):
             for player in range(1, min(num_groups, players_per_group[0]) + 1):
                 for group in range(1, num_groups + 1):
                     if group == player:
@@ -209,15 +205,15 @@ def symmetry_breaking_2(m1, m2, num_groups):
 #                 valid_combinations.append((m1, m2))
 #         elif not k2 and remaining_players == 0 and m1 == num_groups:
 #             valid_combinations.append((m1, 0))
-
+    
 #     return valid_combinations
 
 def find_all_valid_combinations():
     valid_combinations = set()
-
+    
     k1 = players_per_group[0]
     k2 = players_per_group[1] if len(players_per_group) > 1 else None
-
+    
     for num_groups in range(2, num_players + 1):
         for m1 in range(0, num_players + 1):
             for m2 in range(0, num_players + 1):
@@ -227,7 +223,7 @@ def find_all_valid_combinations():
                 else:
                     if k1 * m1 == num_players and m1 == num_groups:
                         valid_combinations.add((k1, None, m1, None, num_groups))
-
+    
     return list(valid_combinations)
 
 # returns a unique identifier for the variable that represents the assignment of the player to the group in the week
@@ -353,7 +349,7 @@ def write_to_cnf(num_vars, num_clauses, problem_name):
         for clause in all_clauses:
             for literal in clause: writer.write(str(literal) + " ")
             writer.write("0\n")
-
+    
     print_to_console_and_log("CNF written to " + file_path + ".\n")
 
 def write_to_xlsx(result_dict):
@@ -428,7 +424,7 @@ def run_kissat(problem_name):
 def solve_sat_problem():
     global num_players, id_variable, sat_solver, id_counter
 
-
+    
     valid_combinations = find_all_valid_combinations()
     for k1, k2, m1, m2, num_groups in valid_combinations:
         id_variable = num_players * num_groups * num_weeks
@@ -437,7 +433,7 @@ def solve_sat_problem():
         result_dict = {
             "ID": id_counter,
             "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
-            "Type": "sga_bdd",
+            "Type": "nsc",
             "Time": "",
             "Result": "",
             "Variables": 0,
@@ -451,7 +447,7 @@ def solve_sat_problem():
             f"Players per group: {players_per_group}.\n" +
             f"k1: {k1}.\n" +
             f"k2: {k2}.\n" +
-            f"m1: {m1}.\n" +
+            f"m1: {m1}.\n" + 
             f"m2: {m2}.\n" +
             f"Number of weeks: {num_weeks}.\n")
 
@@ -498,7 +494,7 @@ def solve_sat_problem():
                 print_to_console_and_log(f"Time limit exceeded ({time_budget}s).\n")
                 result_dict["Result"] = "timeout"
                 result_dict["Time"] = time_budget
-
+            
             else:
                 elapsed_time = format(sat_solver.time(), ".3f")
                 print_to_console_and_log(f"A solution was found in {elapsed_time}s.")
@@ -516,13 +512,13 @@ def solve_sat_problem():
 
         timer.cancel()
         sat_solver.delete()
-
+        
         if enable_kissat:
             write_to_cnf(num_vars, num_clauses, problem_name)
             run_kissat(problem_name)
         write_to_xlsx(result_dict)
         all_clauses.clear()
-
+        
         print_to_console_and_log('-' * 120)
 
 # Open the log file in append mode
@@ -543,12 +539,12 @@ def run_from_input_file():
             parts = line.split()
             try:
                 num_players = int(parts[0])
-
+                
                 # Clean and validate the list part
                 list_part = parts[1].strip()
                 if not (list_part.startswith('[') and list_part.endswith(']')):
                     raise SyntaxError("List part is not properly formatted")
-
+                
                 players_per_group = ast.literal_eval(list_part)
                 num_weeks = int(parts[2])
                 solve_sat_problem()
