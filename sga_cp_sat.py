@@ -31,8 +31,40 @@ def print_to_console_and_log(*args, **kwargs):
 # Initialize result list
 results = []
 
+# SB1: The first week order is [1, 2, 3, ... x]
+def symmetry_breaking_1(model, variables, num_players, num_groups, players_per_group, m1, m2):
+    for player in range(1, num_players + 1):
+        if m2 is None or len(players_per_group) == 1:
+            right_group = (player - 1) // players_per_group[0] + 1
+        else: 
+            if player <= m2 * players_per_group[1]:
+                right_group = (player - 1) // players_per_group[1] + 1
+            else: 
+                right_group = m2 + (player - m2 * players_per_group[1] - 1) // players_per_group[0] + 1
+
+        # Áp dụng ràng buộc cho nhóm tương ứng
+        for group in range(1, num_groups + 1):
+            if group == right_group:
+                model.Add(variables[(player, group, 1)] == 1)  # Người chơi ở đúng nhóm
+            else:
+                model.Add(variables[(player, group, 1)] == 0)  # Người chơi không ở nhóm khác
+
+
+
+# SB2: From week 2, first p players belong to p groups
+def symmetry_breaking_2(model, variables, num_players, num_groups, players_per_group, m1, m2, num_weeks):
+    max_week = num_weeks // 2 - 1 if num_weeks / 2 == num_weeks // 2 else num_weeks // 2
+    for week in range(2, max_week + 1):
+        for player in range(1, num_groups + 1):
+            for group in range(1, num_groups + 1):
+                if group == player:
+                    model.Add(variables[(player, group, week)] == 1)
+                else:
+                    model.Add(variables[(player, group, week)] == 0)
+
+
 # Hàm để chạy mô hình với các tham số đầu vào
-def run_model(num_players, num_weeks, players_per_group, id_counter, time_budget=60):
+def run_model(num_players, num_weeks, players_per_group, id_counter, time_budget=600):
     # Tạo model
     model = cp_model.CpModel()
 
@@ -47,14 +79,14 @@ def run_model(num_players, num_weeks, players_per_group, id_counter, time_budget
         max_groups = num_players // min(players_per_group)
 
         for num_groups in range(2, max_groups + 1):
-            for m1 in range(0, num_players // k1 + 1):
-                for m2 in range(0, num_players // k2 + 1 if k2 is not None else 1):
-                    if k2 is not None:
+            for m1 in range(1, num_players // k1 + 1):
+                if k2 is not None:
+                    for m2 in range(1, num_players // k2 + 1):
                         if m1 * k1 + m2 * k2 == num_players and m1 + m2 == num_groups:
                             valid_combinations.add((k1, k2, m1, m2, num_groups))
-                    else:
-                        if m1 * k1 == num_players and m1 == num_groups:
-                            valid_combinations.add((k1, None, m1, 0, num_groups))
+                else:
+                    if m1 * k1 == num_players and m1 == num_groups:
+                        valid_combinations.add((k1, None, m1, 0, num_groups))
 
         return list(valid_combinations)
 
@@ -75,6 +107,10 @@ def run_model(num_players, num_weeks, players_per_group, id_counter, time_budget
 
         def get_variable(golfer, group, week):
             return variables[(golfer, group, week)]
+
+        # Ràng buộc: Áp dụng symmetry breaking
+        symmetry_breaking_1(model, variables, num_players, num_groups, players_per_group, m1, m2)
+        symmetry_breaking_2(model, variables, num_players, num_groups, players_per_group, m1, m2, num_weeks)
 
         # Ràng buộc: Mỗi người chơi chỉ xuất hiện trong một nhóm mỗi tuần
         for player in range(1, num_players + 1):
@@ -113,6 +149,7 @@ def run_model(num_players, num_weeks, players_per_group, id_counter, time_budget
         start_time = time.time()
         status = solver.Solve(model)
         end_time = time.time()
+        status = solver.Solve(model)
 
         # Hàm hiển thị giải pháp
         def display_solution():
@@ -139,18 +176,21 @@ def run_model(num_players, num_weeks, players_per_group, id_counter, time_budget
         # In ra số clause, variable, thời gian giải bài toán
         num_variables = len(model.Proto().variables)
         num_constraints = len(model.Proto().constraints)
-        solving_time = end_time - start_time
+        solving_time = solver.WallTime()
+        # external_time = end_time - start_time
         print_to_console_and_log(f"Number of variables: {num_variables}")
         print_to_console_and_log(f"Number of constraints: {num_constraints}")
-        print_to_console_and_log(f"Solving time: {solving_time:.4f} seconds")
+        print_to_console_and_log(f"Solving time: {solving_time:.3f} seconds")
+        # print_to_console_and_log(f"External time: {external_time:.3f} seconds")
+
 
         # Collect results
         result_dict = {
             "ID": id_counter,
-            "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
+            "Problem": f"{num_players}-{players_per_group}-{num_weeks}-[{m1}-{m2}]",
             "Type": "cp-sat",
-            "Time": f"{solving_time:.4f} seconds",
-            "Result": "sat" if status in [cp_model.OPTIMAL, cp_model.FEASIBLE] else "unsat" if status == cp_model.INFEASIBLE else "time_out",
+            "Time": f"{solving_time:.3f}",
+            "Result": "sat" if status in [cp_model.OPTIMAL, cp_model.FEASIBLE] else "unsat" if status == cp_model.INFEASIBLE else "timeout",
             "Variables": num_variables,
             "Clauses": num_constraints
         }

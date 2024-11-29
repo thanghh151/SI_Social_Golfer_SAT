@@ -226,8 +226,8 @@ def find_all_valid_combinations():
     k2 = players_per_group[1] if len(players_per_group) > 1 else None
     
     for num_groups in range(2, num_players + 1):
-        for m1 in range(0, num_players + 1):
-            for m2 in range(0, num_players + 1):
+        for m1 in range(1, num_players + 1):
+            for m2 in range(1, num_players + 1):
                 if k2 is not None:
                     if k1 * m1 + k2 * m2 == num_players and m1 + m2 == num_groups:
                         valid_combinations.add((k1, k2, m1, m2, num_groups))

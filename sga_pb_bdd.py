@@ -21,7 +21,7 @@ players_per_group: list[int]  # players per group
 num_groups: int  # number of groups
 num_players: int  # players per group * number of groups
 id_variable: int
-time_budget = 60
+time_budget = 600
 show_additional_info = True
 online_path = ''
 
@@ -38,11 +38,11 @@ def is_prime(x: int) -> bool:
     return True
 
 def generate_all_clauses(m1, m2, num_groups):
+    symmetry_breaking_1(m1, m2, num_groups)
+    symmetry_breaking_2(m1, m2, num_groups)
     ensure_golfer_plays_exactly_once_per_week(num_groups)
     ensure_group_contains_exactly_p_players(m1, m2, num_groups)
     ensure_no_repeated_players_in_groups(num_groups)
-    symmetry_breaking_1(m1, m2, num_groups)
-    symmetry_breaking_2(m1, m2, num_groups)
 
 def plus_clause(clause):
     sat_solver.add_clause(clause)
@@ -68,7 +68,7 @@ def exactly_one(var: list[int], num_groups):
 # x_w_g (1)
 def ensure_golfer_plays_exactly_once_per_week(num_groups):
     for player in range(1, num_players + 1):
-        for week in range(2, num_weeks + 1):
+        for week in range(1, num_weeks + 1):
             list = []
             for group in range(1, num_groups + 1):
                 list.append(get_variable(player, group, week, num_groups))
@@ -171,30 +171,51 @@ def symmetry_breaking_1(m1, m2, num_groups):
                 right_group = (player - 1) // players_per_group[1] + 1
             else:
                 right_group = m2 + (player - m2 * players_per_group[1] - 1) // players_per_group[0] + 1
-        
+
         for group in range(1, num_groups + 1):
             if group == right_group:
                 sat_solver.add_clause([get_variable(player, group, 1, num_groups)])
             else:
                 sat_solver.add_clause([-1 * get_variable(player, group, 1, num_groups)])
 
+
 # SB2: From week 2, first p players belong to p groups
 def symmetry_breaking_2(m1, m2, num_groups):
-    for week in range(2, num_weeks + 1):
-        if m2 is not None:
+    # max_week = math.floor((num_players - players_per_group[1]) / players_per_group[0]) - 1
+    max_week = num_weeks // 2 - 1 if num_weeks / 2 == num_weeks // 2 else num_weeks // 2
+    if m2 is not None:
+        for week in range(2, max_week + 1):
             for player in range(1, min(num_groups, players_per_group[1]) + 1):
                 for group in range(1, num_groups + 1):
                     if group == player:
                         plus_clause([get_variable(player, group, week, num_groups)])
                     else:
                         plus_clause([-1 * get_variable(player, group, week, num_groups)])
-        else:
+    else:
+        for week in range(2, max_week + 1):
             for player in range(1, min(num_groups, players_per_group[0]) + 1):
                 for group in range(1, num_groups + 1):
                     if group == player:
                         plus_clause([get_variable(player, group, week, num_groups)])
                     else:
                         plus_clause([-1 * get_variable(player, group, week, num_groups)])
+# SB2: From week 2, first p players belong to p groups
+# def symmetry_breaking_2(m1, m2, num_groups):
+#     for week in range(2, num_weeks + 1):
+#         if m2 is not None:
+#             for player in range(1, min(num_groups, players_per_group[1]) + 1):
+#                 for group in range(1, num_groups + 1):
+#                     if group == player:
+#                         plus_clause([get_variable(player, group, week, num_groups)])
+#                     else:
+#                         plus_clause([-1 * get_variable(player, group, week, num_groups)])
+#         else:
+#             for player in range(1, min(num_groups, players_per_group[0]) + 1):
+#                 for group in range(1, num_groups + 1):
+#                     if group == player:
+#                         plus_clause([get_variable(player, group, week, num_groups)])
+#                     else:
+#                         plus_clause([-1 * get_variable(player, group, week, num_groups)])
 
 # def find_valid_m1_m2():
 #     k1 = players_per_group[0]
@@ -219,8 +240,8 @@ def find_all_valid_combinations():
     k2 = players_per_group[1] if len(players_per_group) > 1 else None
 
     for num_groups in range(2, num_players + 1):
-        for m1 in range(0, num_players + 1):
-            for m2 in range(0, num_players + 1):
+        for m1 in range(1, num_players + 1):
+            for m2 in range(1, num_players + 1):
                 if k2 is not None:
                     if k1 * m1 + k2 * m2 == num_players and m1 + m2 == num_groups:
                         valid_combinations.add((k1, k2, m1, m2, num_groups))
@@ -437,7 +458,7 @@ def solve_sat_problem():
         result_dict = {
             "ID": id_counter,
             "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
-            "Type": "PBLib_bdd",
+            "Type": "pblib_bdd",
             "Time": "",
             "Result": "",
             "Variables": 0,

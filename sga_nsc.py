@@ -16,9 +16,9 @@ from datetime import datetime
 num_weeks: int  # number of weeks
 players_per_group: list[int]  # players per group
 num_groups: int  # number of groups
-num_players: int 
+num_players: int
 id_variable: int
-time_budget = 60
+time_budget = 600
 show_additional_info = True
 online_path = ''
 
@@ -29,11 +29,11 @@ all_clauses = []
 id_counter = 0
 
 def generate_all_clauses(m1, m2, num_groups):
+    symmetry_breaking_1(m1, m2, num_groups)
+    symmetry_breaking_2(m1, m2, num_groups)
     ensure_golfer_plays_exactly_once_per_week(num_groups)
     ensure_group_contains_exactly_p_players(m1, m2, num_groups)
     ensure_no_repeated_players_in_groups(num_groups)
-    symmetry_breaking_1(m1, m2, num_groups)
-    # symmetry_breaking_2(m1, m2, num_groups)
 
 def plus_clause(clause):
     sat_solver.add_clause(clause)
@@ -59,7 +59,7 @@ def exactly_one(var: list[int], num_groups):
 # x_w_g (1)
 def ensure_golfer_plays_exactly_once_per_week(num_groups):
     for player in range(1, num_players + 1):
-        for week in range(2, num_weeks + 1):
+        for week in range(1, num_weeks + 1):
             list = []
             for group in range(1, num_groups + 1):
                 list.append(get_variable(player, group, week, num_groups))
@@ -165,7 +165,7 @@ def symmetry_breaking_1(m1, m2, num_groups):
                 right_group = (player - 1) // players_per_group[1] + 1
             else:
                 right_group = m2 + (player - m2 * players_per_group[1] - 1) // players_per_group[0] + 1
-        
+
         for group in range(1, num_groups + 1):
             if group == right_group:
                 sat_solver.add_clause([get_variable(player, group, 1, num_groups)])
@@ -174,8 +174,9 @@ def symmetry_breaking_1(m1, m2, num_groups):
 
 # SB2: From week 2, first p players belong to p groups
 def symmetry_breaking_2(m1, m2, num_groups):
+    # max_week = math.floor((num_players - players_per_group[1]) / players_per_group[0]) - 1
+    max_week = num_weeks // 2 - 1 if num_weeks / 2 == num_weeks // 2 else num_weeks // 2
     if m2 is not None:
-        max_week = math.floor((num_players - players_per_group[1]) / players_per_group[0]) - 1
         for week in range(2, max_week + 1):
             for player in range(1, min(num_groups, players_per_group[1]) + 1):
                 for group in range(1, num_groups + 1):
@@ -205,25 +206,25 @@ def symmetry_breaking_2(m1, m2, num_groups):
 #                 valid_combinations.append((m1, m2))
 #         elif not k2 and remaining_players == 0 and m1 == num_groups:
 #             valid_combinations.append((m1, 0))
-    
+
 #     return valid_combinations
 
 def find_all_valid_combinations():
     valid_combinations = set()
-    
+
     k1 = players_per_group[0]
     k2 = players_per_group[1] if len(players_per_group) > 1 else None
-    
+
     for num_groups in range(2, num_players + 1):
-        for m1 in range(0, num_players + 1):
-            for m2 in range(0, num_players + 1):
+        for m1 in range(1, num_players + 1):
+            for m2 in range(1, num_players + 1):
                 if k2 is not None:
                     if k1 * m1 + k2 * m2 == num_players and m1 + m2 == num_groups:
                         valid_combinations.add((k1, k2, m1, m2, num_groups))
                 else:
                     if k1 * m1 == num_players and m1 == num_groups:
                         valid_combinations.add((k1, None, m1, None, num_groups))
-    
+
     return list(valid_combinations)
 
 # returns a unique identifier for the variable that represents the assignment of the player to the group in the week
@@ -349,7 +350,7 @@ def write_to_cnf(num_vars, num_clauses, problem_name):
         for clause in all_clauses:
             for literal in clause: writer.write(str(literal) + " ")
             writer.write("0\n")
-    
+
     print_to_console_and_log("CNF written to " + file_path + ".\n")
 
 def write_to_xlsx(result_dict):
@@ -424,7 +425,7 @@ def run_kissat(problem_name):
 def solve_sat_problem():
     global num_players, id_variable, sat_solver, id_counter
 
-    
+
     valid_combinations = find_all_valid_combinations()
     for k1, k2, m1, m2, num_groups in valid_combinations:
         id_variable = num_players * num_groups * num_weeks
@@ -432,7 +433,7 @@ def solve_sat_problem():
         # print(f"Trying k1 = {k1}, k2 = {k2}, m1 = {m1}, m2 = {m2}, num_groups = {num_groups}...")
         result_dict = {
             "ID": id_counter,
-            "Problem": f"{num_players}-{num_groups}-{players_per_group}-{num_weeks}",
+            "Problem": f"{num_players}-{players_per_group}-{num_weeks}-[{m1}-{m2}]",
             "Type": "nsc",
             "Time": "",
             "Result": "",
@@ -447,7 +448,7 @@ def solve_sat_problem():
             f"Players per group: {players_per_group}.\n" +
             f"k1: {k1}.\n" +
             f"k2: {k2}.\n" +
-            f"m1: {m1}.\n" + 
+            f"m1: {m1}.\n" +
             f"m2: {m2}.\n" +
             f"Number of weeks: {num_weeks}.\n")
 
@@ -494,7 +495,7 @@ def solve_sat_problem():
                 print_to_console_and_log(f"Time limit exceeded ({time_budget}s).\n")
                 result_dict["Result"] = "timeout"
                 result_dict["Time"] = time_budget
-            
+
             else:
                 elapsed_time = format(sat_solver.time(), ".3f")
                 print_to_console_and_log(f"A solution was found in {elapsed_time}s.")
@@ -512,13 +513,13 @@ def solve_sat_problem():
 
         timer.cancel()
         sat_solver.delete()
-        
+
         if enable_kissat:
             write_to_cnf(num_vars, num_clauses, problem_name)
             run_kissat(problem_name)
         write_to_xlsx(result_dict)
         all_clauses.clear()
-        
+
         print_to_console_and_log('-' * 120)
 
 # Open the log file in append mode
@@ -539,12 +540,12 @@ def run_from_input_file():
             parts = line.split()
             try:
                 num_players = int(parts[0])
-                
+
                 # Clean and validate the list part
                 list_part = parts[1].strip()
                 if not (list_part.startswith('[') and list_part.endswith(']')):
                     raise SyntaxError("List part is not properly formatted")
-                
+
                 players_per_group = ast.literal_eval(list_part)
                 num_weeks = int(parts[2])
                 solve_sat_problem()
